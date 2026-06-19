@@ -1,0 +1,10 @@
+/node_modules/
+/dist/
+/build/
+/.dx/dev-server.*.log
+/.dx/*.log
+/.dx/www/output/
+/.dx/receipts/check/check-check-*.json
+/.dx/receipts/check/check-web-*.json
+/.dx/receipts/check/runners/*-[0-9]*.json
+/.dx/receipts/deploy/

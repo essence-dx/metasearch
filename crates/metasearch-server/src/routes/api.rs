@@ -1,0 +1,613 @@
+//! JSON API routes for programmatic access.
+
+use std::sync::Arc;
+
+use axum::{
+    Json, Router,
+    extract::{Query, State},
+    http::StatusCode,
+    response::IntoResponse,
+    routing::get,
+};
+use metasearch_core::category::SearchCategory;
+use metasearch_core::engine::{EngineCatalogEntry, EngineCatalogSummary};
+use metasearch_core::query::SearchQuery;
+use serde::Deserialize;
+
+use crate::cache::SearchCache;
+use crate::health::{
+    ProviderProbeSummary, provider_config_ready, provider_pool_status,
+    provider_probe_recently_proven,
+};
+use crate::input;
+use crate::state::AppState;
+
+const MAX_TRANSLATE_TEXT_CHARS: usize = 4000;
+
+#[derive(Deserialize)]
+pub struct ApiSearchParams {
+    pub q: String,
+    pub format: Option<String>,
+    pub categories: Option<String>,
+    pub language: Option<String>,
+    pub page: Option<u32>,
+    pub safe_search: Option<u8>,
+    pub time_range: Option<String>,
+    pub engines: Option<String>,
+}
+
+#[derive(Deserialize)]
+pub struct ApiTranslateParams {
+    pub text: String,
+    pub target: Option<String>,
+    pub source: Option<String>,
+}
+
+pub fn routes() -> Router<Arc<AppState>> {
+    Router::new()
+        .route("/api/v1/search", get(api_search))
+        .route("/api/v1/translate", get(api_translate))
+        .route("/api/v1/engines", get(api_engines))
+        .route("/api/v1/config", get(api_config))
+        .route("/api/v1/status", get(api_status))
+}
+
+async fn api_search(
+    State(state): State<Arc<AppState>>,
+    Query(params): Query<ApiSearchParams>,
+) -> impl IntoResponse {
+    let Some(query_text) = input::normalize_query(&params.q, input::MAX_QUERY_CHARS) else {
+        return (
+            StatusCode::BAD_REQUEST,
+            Json(serde_json::json!({
+                "error": "missing_query",
+                "message": "The `q` query parameter is required."
+            })),
+        )
+            .into_response();
+    };
+
+    if let Some(format) = params.format.as_deref() {
+        if !matches!(format, "json" | "JSON") {
+            return (
+                StatusCode::BAD_REQUEST,
+                Json(serde_json::json!({
+                    "error": "unsupported_format",
+                    "message": "Only `format=json` is supported on the JSON API.",
+                    "received": format
+                })),
+            )
+                .into_response();
+        }
+    }
+
+    let categories = input::parse_categories(params.categories.as_deref(), None);
+    let primary_category = categories
+        .first()
+        .copied()
+        .unwrap_or(SearchCategory::General);
+    let page = params
+        .page
+        .unwrap_or(1)
+        .max(1)
+        .min(state.settings.search.max_page.max(1));
+    let safe_search = params
+        .safe_search
+        .unwrap_or(state.settings.search.safe_search)
+        .min(2);
+    let language = input::normalize_language(
+        params.language.as_deref(),
+        &state.settings.search.default_language,
+    );
+    let engines = input::parse_engine_list(params.engines.as_deref());
+    let time_range = input::normalize_time_range(params.time_range.as_deref());
+
+    let search_query = SearchQuery {
+        query: query_text,
+        categories: categories.clone(),
+        language: language.clone(),
+        safe_search,
+        page,
+        time_range: time_range.clone(),
+        engines: engines.clone(),
+    };
+
+    let cache_key = SearchCache::cache_key_for_query(&search_query);
+    let cached_before_search = state.cache.get(&cache_key).await.is_some();
+
+    let response = state.orchestrator.search(&search_query, &cache_key).await;
+
+    (
+        StatusCode::OK,
+        Json(serde_json::json!({
+            "query": response.query,
+            "results": response.results,
+            "number_of_results": response.number_of_results,
+            "engines_used": response.engines_used,
+            "engines_failed": response.engines_failed,
+            "search_time_ms": response.search_time_ms,
+            "cached": cached_before_search,
+            "category": primary_category,
+            "categories": categories,
+            "page": page,
+            "safe_search": safe_search,
+            "language": language,
+            "time_range": time_range,
+            "requested_engines": engines
+        })),
+    )
+        .into_response()
+}
+
+async fn api_translate(
+    State(state): State<Arc<AppState>>,
+    Query(params): Query<ApiTranslateParams>,
+) -> impl IntoResponse {
+    let Some(text) = input::normalize_query(&params.text, MAX_TRANSLATE_TEXT_CHARS) else {
+        return (
+            StatusCode::BAD_REQUEST,
+            Json(serde_json::json!({
+                "error": "missing_text",
+                "message": "The `text` query parameter is required."
+            })),
+        )
+            .into_response();
+    };
+
+    let target = input::normalize_language(params.target.as_deref(), "en")
+        .unwrap_or_else(|| "en".to_string());
+    let source = normalize_translate_source(params.source.as_deref());
+    let response = state
+        .http_client
+        .get("https://translate.googleapis.com/translate_a/single")
+        .query(&[
+            ("client", "gtx"),
+            ("sl", source.as_str()),
+            ("tl", target.as_str()),
+            ("dt", "t"),
+            ("q", text.as_str()),
+        ])
+        .send()
+        .await;
+
+    let Ok(response) = response else {
+        return (
+            StatusCode::BAD_GATEWAY,
+            Json(serde_json::json!({
+                "error": "translate_unavailable",
+                "message": "Translation provider is unavailable."
+            })),
+        )
+            .into_response();
+    };
+
+    if !response.status().is_success() {
+        return (
+            StatusCode::BAD_GATEWAY,
+            Json(serde_json::json!({
+                "error": "translate_provider_error",
+                "message": "Translation provider returned an error.",
+                "status": response.status().as_u16()
+            })),
+        )
+            .into_response();
+    }
+
+    let payload = response.json::<serde_json::Value>().await;
+    let translated_text = payload
+        .ok()
+        .and_then(|payload| translated_text_from_google_payload(&payload))
+        .unwrap_or_default();
+
+    if translated_text.trim().is_empty() {
+        return (
+            StatusCode::BAD_GATEWAY,
+            Json(serde_json::json!({
+                "error": "translate_empty_response",
+                "message": "Translation provider returned an empty response."
+            })),
+        )
+            .into_response();
+    }
+
+    (
+        StatusCode::OK,
+        Json(serde_json::json!({
+            "source_language": source,
+            "target_language": target,
+            "translated_text": translated_text
+        })),
+    )
+        .into_response()
+}
+
+async fn api_engines(State(state): State<Arc<AppState>>) -> Json<serde_json::Value> {
+    let catalog = state.engine_registry.adapter_catalog();
+    let summary = EngineCatalogSummary::from_entries(&catalog);
+    let default_timeout_ms = state.settings.search.request_timeout_ms;
+
+    let engines: Vec<serde_json::Value> = catalog
+        .into_iter()
+        .map(|entry| {
+            let metadata = entry.metadata;
+            let adapter = entry.adapter;
+            let name = metadata.name.clone();
+            let health = state.health.snapshot(name.as_ref(), default_timeout_ms);
+            let engine_status = engine_status(
+                metadata.enabled,
+                adapter.configured,
+                health.as_ref().is_some_and(|snapshot| snapshot.healthy),
+                health
+                    .as_ref()
+                    .is_some_and(|snapshot| snapshot.recently_healthy),
+                health.is_some(),
+            );
+            let health_json = match health {
+                Some(snapshot) => serde_json::json!(snapshot),
+                None => serde_json::json!({
+                    "name": name.clone(),
+                    "probed": false,
+                    "healthy": null,
+                    "recently_healthy": false,
+                }),
+            };
+            serde_json::json!({
+                "name": name,
+                "display_name": metadata.display_name,
+                "homepage": metadata.homepage,
+                "categories": metadata.categories,
+                "enabled": metadata.enabled,
+                "registered": true,
+                "enabled_by_default": adapter.enabled_by_default,
+                "configured": adapter.configured,
+                "effective_enabled": metadata.enabled && adapter.configured,
+                "status": engine_status,
+                "access_model": adapter.access_model,
+                "implementation": adapter.implementation,
+                "config_requirements": adapter.config_requirements,
+                "docs_url": adapter.docs_url,
+                "skip_reason": adapter.skip_reason,
+                "notes": adapter.notes,
+                "timeout_ms": metadata.timeout_ms,
+                "weight": metadata.weight,
+                "health": health_json,
+            })
+        })
+        .collect();
+
+    Json(serde_json::json!({
+        "count": summary.registered,
+        "provider_summary": summary,
+        "probe_window_secs": crate::health::RECENT_HEALTH_WINDOW.as_secs(),
+        "engines": engines
+    }))
+}
+
+async fn api_config(State(state): State<Arc<AppState>>) -> Json<serde_json::Value> {
+    let config_warnings = state.runtime_warnings();
+
+    Json(serde_json::json!({
+        "version": env!("CARGO_PKG_VERSION"),
+        "engine_count": state.engine_registry.count(),
+        "safe_search": state.settings.search.safe_search,
+        "default_language": state.settings.search.default_language,
+        "max_page": state.settings.search.max_page,
+        "max_concurrent_engines": state.settings.search.max_concurrent_engines,
+        "remote_autocomplete_enabled": state.settings.search.remote_autocomplete_enabled,
+        "blocked_result_domains": &state.settings.search.blocked_result_domains,
+        "request_timeout_ms": state.settings.search.request_timeout_ms,
+        "max_query_chars": crate::input::MAX_QUERY_CHARS,
+        "max_autocomplete_query_chars": crate::input::MAX_AUTOCOMPLETE_QUERY_CHARS,
+        "max_engine_count": crate::input::MAX_ENGINE_COUNT,
+        "max_category_count": crate::input::MAX_CATEGORY_COUNT,
+        "image_proxy": state.settings.server.image_proxy,
+        "templates_dir": &state.template_dir,
+        "static_dir": &state.static_dir,
+        "trust_forwarded_headers": state.settings.server.trust_forwarded_headers,
+        "security_headers_enabled": state.settings.server.security_headers_enabled,
+        "permissive_cors": state.settings.server.permissive_cors,
+        "allowed_origins": state.settings.server.allowed_origins,
+        "cache_enabled": state.settings.cache.enabled,
+        "cache_ttl_secs": state.settings.cache.ttl_secs,
+        "rate_limit_enabled": state.settings.rate_limit.enabled,
+        "bot_detection_enabled": state.settings.bot_detection.enabled,
+        "asset_warning_count": state.asset_warnings().len(),
+        "config_warnings": config_warnings,
+    }))
+}
+
+async fn api_status(State(state): State<Arc<AppState>>) -> Json<serde_json::Value> {
+    let config_warnings = state.runtime_warnings();
+    let asset_warnings = state.asset_warnings();
+    let unhealthy = state.health.unhealthy_engines();
+    let health_snapshots = state
+        .health
+        .snapshots(state.settings.search.request_timeout_ms);
+    let catalog = state.engine_registry.adapter_catalog();
+    let provider_summary = EngineCatalogSummary::from_entries(&catalog);
+    let provider_probe_summary = ProviderProbeSummary::from_catalog(
+        &catalog,
+        &state.health,
+        state.settings.search.request_timeout_ms,
+    );
+    let provider_status = provider_pool_status(
+        &provider_summary,
+        &provider_probe_summary,
+        state.settings.search.max_concurrent_engines,
+    );
+    let provider_config_ready = provider_config_ready(provider_status);
+    let provider_probe_proven = provider_probe_recently_proven(&provider_probe_summary);
+    let skipped_engines = skipped_engines(&catalog);
+    let raw_health_counts = serde_json::json!({
+        "tracked": state.health.tracked_engine_count(),
+        "recently_healthy": state.health.recently_healthy_engine_count(),
+        "unhealthy": unhealthy.len(),
+    });
+
+    let service_status = if state.engine_registry.count() == 0 {
+        "error"
+    } else if !unhealthy.is_empty() || !config_warnings.is_empty() {
+        "degraded"
+    } else {
+        "ok"
+    };
+    let status = status_with_provider_evidence(
+        service_status,
+        provider_status,
+        provider_config_ready,
+        provider_probe_proven,
+    );
+
+    let runtime = serde_json::json!({
+        "safe_search": state.settings.search.safe_search,
+        "default_language": state.settings.search.default_language,
+        "max_page": state.settings.search.max_page,
+        "request_timeout_ms": state.settings.search.request_timeout_ms,
+        "max_concurrent_engines": state.settings.search.max_concurrent_engines,
+        "max_query_chars": crate::input::MAX_QUERY_CHARS,
+        "max_autocomplete_query_chars": crate::input::MAX_AUTOCOMPLETE_QUERY_CHARS,
+        "max_engine_count": crate::input::MAX_ENGINE_COUNT,
+        "max_category_count": crate::input::MAX_CATEGORY_COUNT,
+        "remote_autocomplete_enabled": state.settings.search.remote_autocomplete_enabled,
+        "blocked_result_domains": &state.settings.search.blocked_result_domains,
+        "cache_enabled": state.settings.cache.enabled,
+        "cache_ttl_secs": state.settings.cache.ttl_secs,
+        "cache_max_entries": state.settings.cache.max_entries,
+        "rate_limit_enabled": state.settings.rate_limit.enabled,
+        "requests_per_second": state.settings.rate_limit.requests_per_second,
+        "burst_size": state.settings.rate_limit.burst_size,
+        "bot_detection_enabled": state.settings.bot_detection.enabled,
+        "security_headers_enabled": state.settings.server.security_headers_enabled,
+        "permissive_cors": state.settings.server.permissive_cors,
+        "allowed_origins": state.settings.server.allowed_origins,
+        "trust_forwarded_headers": state.settings.server.trust_forwarded_headers,
+        "base_url": state.settings.server.normalized_base_url(),
+        "templates_dir": &state.template_dir,
+        "static_dir": &state.static_dir,
+    });
+
+    Json(serde_json::json!({
+        "status": status,
+        "service_status": service_status,
+        "provider_status": provider_status,
+        "provider_config_ready": provider_config_ready,
+        "provider_probe_recently_proven": provider_probe_proven,
+        "version": env!("CARGO_PKG_VERSION"),
+        "engine_count": state.engine_registry.count(),
+        "provider_summary": provider_summary,
+        "provider_probe_summary": provider_probe_summary.clone(),
+        "recently_healthy_engine_count": provider_probe_summary.recently_healthy,
+        "skipped_engines": skipped_engines,
+        "probe_window_secs": crate::health::RECENT_HEALTH_WINDOW.as_secs(),
+        "tracked_engines": provider_probe_summary.tracked,
+        "unhealthy_engine_count": provider_probe_summary.unhealthy,
+        "unhealthy_engines": unhealthy,
+        "raw_health_counts": raw_health_counts,
+        "asset_warning_count": asset_warnings.len(),
+        "asset_warnings": asset_warnings,
+        "warning_count": config_warnings.len(),
+        "warnings": config_warnings,
+        "engine_health": health_snapshots,
+        "runtime": runtime
+    }))
+}
+
+fn engine_status(
+    enabled: bool,
+    configured: bool,
+    healthy: bool,
+    recently_healthy: bool,
+    probed: bool,
+) -> &'static str {
+    if !configured {
+        "skipped_unconfigured"
+    } else if !enabled {
+        "disabled"
+    } else if probed && !healthy {
+        "unhealthy"
+    } else if recently_healthy {
+        "recently_healthy"
+    } else if probed && healthy {
+        "probed"
+    } else {
+        "cold"
+    }
+}
+
+fn skipped_engines(catalog: &[EngineCatalogEntry]) -> Vec<serde_json::Value> {
+    catalog
+        .iter()
+        .filter(|entry| !entry.metadata.enabled || !entry.adapter.configured)
+        .map(|entry| {
+            serde_json::json!({
+                "name": entry.metadata.name.clone(),
+                "display_name": entry.metadata.display_name.clone(),
+                "enabled": entry.metadata.enabled,
+                "registered": true,
+                "enabled_by_default": entry.adapter.enabled_by_default,
+                "configured": entry.adapter.configured,
+                "effective_enabled": entry.metadata.enabled && entry.adapter.configured,
+                "status": engine_status(
+                    entry.metadata.enabled,
+                    entry.adapter.configured,
+                    false,
+                    false,
+                    false,
+                ),
+                "requires": entry.adapter.config_requirements.clone(),
+                "access_model": entry.adapter.access_model,
+                "reason": entry.adapter.skip_reason.clone(),
+            })
+        })
+        .collect()
+}
+
+fn status_with_provider_evidence(
+    service_status: &'static str,
+    provider_status: &'static str,
+    provider_config_ready: bool,
+    provider_probe_recently_proven: bool,
+) -> &'static str {
+    if service_status == "error" || !provider_config_ready || provider_status == "unavailable" {
+        "error"
+    } else if service_status == "degraded" || !provider_probe_recently_proven {
+        "degraded"
+    } else {
+        service_status
+    }
+}
+
+fn normalize_translate_source(raw: Option<&str>) -> String {
+    raw.map(str::trim)
+        .filter(|value| !value.is_empty())
+        .map(|value| {
+            value
+                .chars()
+                .take(input::MAX_LANGUAGE_CHARS)
+                .collect::<String>()
+        })
+        .filter(|value| {
+            value
+                .chars()
+                .all(|ch| ch.is_ascii_alphanumeric() || matches!(ch, '-' | '_'))
+        })
+        .unwrap_or_else(|| "auto".to_string())
+}
+
+fn translated_text_from_google_payload(payload: &serde_json::Value) -> Option<String> {
+    let translated = payload
+        .get(0)?
+        .as_array()?
+        .iter()
+        .filter_map(|part| part.get(0).and_then(|value| value.as_str()))
+        .collect::<String>();
+    (!translated.trim().is_empty()).then_some(translated)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{
+        engine_status, normalize_translate_source, skipped_engines, status_with_provider_evidence,
+        translated_text_from_google_payload,
+    };
+    use metasearch_core::{
+        category::SearchCategory,
+        engine::{
+            EngineAccessModel, EngineAdapterMetadata, EngineCatalogEntry, EngineConfigRequirement,
+            EngineImplementation, EngineMetadata,
+        },
+    };
+    use smallvec::smallvec;
+
+    #[test]
+    fn engine_status_keeps_unhealthy_authoritative_over_recent_success() {
+        let status = engine_status(true, true, false, true, true);
+        assert_eq!(status, "unhealthy");
+    }
+
+    #[test]
+    fn engine_status_distinguishes_disabled_from_unconfigured() {
+        assert_eq!(engine_status(false, true, false, false, false), "disabled");
+        assert_eq!(
+            engine_status(false, false, false, false, false),
+            "skipped_unconfigured"
+        );
+    }
+
+    #[test]
+    fn skipped_engines_explain_default_configured_and_effective_state() {
+        let skipped = skipped_engines(&[
+            catalog_entry("disabled", false, true),
+            catalog_entry("needs_base_url", true, false),
+        ]);
+
+        assert_eq!(skipped.len(), 2);
+        assert_eq!(skipped[0]["name"], "disabled");
+        assert_eq!(skipped[0]["enabled_by_default"], false);
+        assert_eq!(skipped[0]["configured"], true);
+        assert_eq!(skipped[0]["effective_enabled"], false);
+        assert_eq!(skipped[0]["status"], "disabled");
+        assert_eq!(skipped[1]["name"], "needs_base_url");
+        assert_eq!(skipped[1]["enabled_by_default"], true);
+        assert_eq!(skipped[1]["configured"], false);
+        assert_eq!(skipped[1]["effective_enabled"], false);
+        assert_eq!(skipped[1]["status"], "skipped_unconfigured");
+    }
+
+    #[test]
+    fn status_with_provider_evidence_degrades_when_provider_proof_is_cold() {
+        assert_eq!(
+            status_with_provider_evidence("ok", "cold", true, false),
+            "degraded"
+        );
+        assert_eq!(
+            status_with_provider_evidence("ok", "healthy", true, true),
+            "ok"
+        );
+        assert_eq!(
+            status_with_provider_evidence("ok", "unavailable", false, false),
+            "error"
+        );
+    }
+
+    #[test]
+    fn translate_source_defaults_to_auto_and_rejects_invalid_values() {
+        assert_eq!(normalize_translate_source(None), "auto");
+        assert_eq!(normalize_translate_source(Some("bn")), "bn");
+        assert_eq!(normalize_translate_source(Some("../en")), "auto");
+    }
+
+    #[test]
+    fn google_translate_payload_text_is_joined_from_segments() {
+        let payload = serde_json::json!([[["Hello ", "হ্যালো"], ["world", "বিশ্ব"]]]);
+
+        assert_eq!(
+            translated_text_from_google_payload(&payload).as_deref(),
+            Some("Hello world")
+        );
+    }
+
+    fn catalog_entry(name: &'static str, enabled: bool, configured: bool) -> EngineCatalogEntry {
+        EngineCatalogEntry {
+            metadata: EngineMetadata {
+                name: name.into(),
+                display_name: name.into(),
+                homepage: "https://example.com".into(),
+                categories: smallvec![SearchCategory::General],
+                enabled,
+                timeout_ms: 1000,
+                weight: 1.0,
+            },
+            adapter: EngineAdapterMetadata {
+                enabled_by_default: enabled,
+                configured,
+                access_model: EngineAccessModel::SelfHostedInstance,
+                implementation: EngineImplementation::JsonApi,
+                config_requirements: vec![EngineConfigRequirement::BaseUrl],
+                docs_url: Some("https://example.com/docs".into()),
+                skip_reason: Some("missing base URL".into()),
+                notes: None,
+            },
+        }
+    }
+}

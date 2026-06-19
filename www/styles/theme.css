@@ -1,0 +1,98 @@
+:root {
+  color-scheme: light;
+  --background: 0 0% 100%;
+  --foreground: 0 0% 4%;
+  --surface: 0 0% 98%;
+  --surface-strong: 0 0% 94%;
+  --muted: 0 0% 91%;
+  --muted-foreground: 0 0% 39%;
+  --border: 0 0% 88%;
+  --card: 0 0% 100%;
+  --accent: 0 0% 4%;
+  --accent-foreground: 0 0% 98%;
+  --warning: 38 92% 50%;
+  --warning-text: 35 92% 32%;
+  --success: 0 0% 18%;
+  --success-text: 0 0% 14%;
+  --danger: 0 72% 42%;
+  --destructive: var(--danger);
+  --primary: 0 0% 4%;
+  --primary-foreground: 0 0% 98%;
+  --ring: 0 0% 4%;
+  --spacing: 0.25rem;
+  --font-sans: "JetBrains Mono", "JetBrains Mono NL", ui-monospace, SFMono-Regular, Consolas, "Liberation Mono", monospace;
+  --font-mono: "JetBrains Mono", "JetBrains Mono NL", ui-monospace, SFMono-Regular, Consolas, "Liberation Mono", monospace;
+  --motion-fast: 150ms;
+  --motion-medium: 240ms;
+  --motion-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+  --motion-standard: cubic-bezier(0.2, 0, 0, 1);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    color-scheme: dark;
+    --background: 0 0% 3%;
+    --foreground: 0 0% 96%;
+    --surface: 0 0% 6%;
+    --surface-strong: 0 0% 10%;
+    --muted: 0 0% 15%;
+    --muted-foreground: 0 0% 66%;
+    --border: 0 0% 17%;
+    --card: 0 0% 7%;
+    --accent: 0 0% 98%;
+    --accent-foreground: 0 0% 4%;
+    --success: 0 0% 86%;
+    --success-text: 0 0% 88%;
+    --primary: 0 0% 98%;
+    --primary-foreground: 0 0% 4%;
+    --ring: 0 0% 98%;
+    --warning-text: 38 92% 62%;
+  }
+}
+
+.theme-light,
+.theme-dark {
+  background: hsl(var(--background));
+  color: hsl(var(--foreground));
+}
+
+.theme-light {
+  color-scheme: light;
+  --background: 0 0% 100%;
+  --foreground: 0 0% 4%;
+  --surface: 0 0% 98%;
+  --surface-strong: 0 0% 94%;
+  --muted: 0 0% 91%;
+  --muted-foreground: 0 0% 39%;
+  --border: 0 0% 88%;
+  --card: 0 0% 100%;
+  --accent: 0 0% 4%;
+  --accent-foreground: 0 0% 98%;
+  --primary: 0 0% 4%;
+  --primary-foreground: 0 0% 98%;
+  --ring: 0 0% 4%;
+  --success: 0 0% 18%;
+  --success-text: 0 0% 14%;
+  --danger: 0 72% 42%;
+  --warning-text: 35 92% 32%;
+}
+
+.theme-dark {
+  color-scheme: dark;
+  --background: 0 0% 3%;
+  --foreground: 0 0% 96%;
+  --surface: 0 0% 6%;
+  --surface-strong: 0 0% 10%;
+  --muted: 0 0% 15%;
+  --muted-foreground: 0 0% 66%;
+  --border: 0 0% 17%;
+  --card: 0 0% 7%;
+  --accent: 0 0% 98%;
+  --accent-foreground: 0 0% 4%;
+  --primary: 0 0% 98%;
+  --primary-foreground: 0 0% 4%;
+  --ring: 0 0% 98%;
+  --success: 0 0% 86%;
+  --success-text: 0 0% 88%;
+  --warning-text: 38 92% 62%;
+}

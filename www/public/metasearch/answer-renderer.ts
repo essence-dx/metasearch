@@ -1,0 +1,126 @@
+(() => {
+  const common = window.DxMetasearchAnswerCommon;
+  const controls = window.DxMetasearchAnswerControls;
+  const evidenceRenderer = window.DxMetasearchAnswerEvidence;
+  const {
+    buildAnswerText,
+    cleanText,
+    createElement,
+    defaultLanguage,
+    replaceChildren,
+  } = common;
+  const { renderMessage } = controls;
+  const { hydrateAnswerEvidence, renderEvidence } = evidenceRenderer;
+  const typingTimers = new WeakMap();
+  let answerRenderId = 0;
+  let activeEvidenceController = null;
+
+  function renderMediaStage(payload, state) {
+    return window.DxMetasearchAnswerMedia?.renderAnswerMediaStage?.(payload, state) || null;
+  }
+
+  function disposeExistingMedia(elements) {
+    const stage = elements.resultList?.querySelector?.("[data-answer-media-stage]");
+    window.DxMetasearchAnswerMedia?.disposeAnswerMediaStage?.(stage);
+  }
+
+  function cancelTyping(node) {
+    const timer = typingTimers.get(node);
+    if (timer) window.clearTimeout(timer);
+    typingTimers.delete(node);
+  }
+
+  function abortActiveAnswerWork() {
+    activeEvidenceController?.abort();
+    activeEvidenceController = null;
+    answerRenderId += 1;
+    window.DxMetasearchAnswerTts?.stop?.();
+  }
+
+  function renderPending({ state, elements }) {
+    if (!elements.resultList) return;
+    abortActiveAnswerWork();
+    elements.resultList.setAttribute("data-result-layout", "answer");
+    const shell = createElement("section", "answer-thread answer-thread--pending");
+    shell.setAttribute("data-result-card", "true");
+    const user = renderMessage("user", cleanText(state.query), { speaker: true, language: state.language || defaultLanguage });
+    const assistant = createElement("article", "answer-message answer-message--assistant");
+    const bubble = createElement("div", "answer-bubble");
+    bubble.append(createElement("p", "answer-shimmer", "Reading live results"));
+    assistant.append(bubble);
+    shell.append(user.message, assistant);
+    replaceChildren(elements.resultList, [shell]);
+  }
+
+  function renderAnswer({ payload, state, elements, apiOrigin }) {
+    if (!elements.resultList) return;
+    abortActiveAnswerWork();
+    const renderId = answerRenderId;
+    const evidenceController = new AbortController();
+    activeEvidenceController = evidenceController;
+    const language = state.language || defaultLanguage;
+    const answerText = buildAnswerText(payload, state);
+    const shell = createElement("section", "answer-thread");
+    shell.setAttribute("data-result-card", "true");
+
+    const user = renderMessage("user", cleanText(state.query || payload.query), { speaker: true, language });
+    const assistant = renderMessage("assistant", "", { assistant: true, latest: true, language, sourceText: answerText });
+    const shimmer = createElement("p", "answer-shimmer", "Composing the source-backed answer");
+    assistant.content.replaceWith(shimmer);
+    const media = renderMediaStage(payload, state);
+    const evidence = renderEvidence(payload);
+
+    shell.append(user.message, assistant.message);
+    if (media) shell.append(media);
+    shell.append(evidence.section);
+    disposeExistingMedia(elements);
+    replaceChildren(elements.resultList, [shell]);
+    function showAssistantContent() {
+      if (!shell.isConnected || renderId !== answerRenderId) return false;
+      if (shimmer.isConnected) shimmer.replaceWith(assistant.content);
+      return true;
+    }
+
+    hydrateAnswerEvidence(shell, evidence.section, evidence, payload, state, apiOrigin, assistant.content, evidenceController.signal, (node, text) => {
+      if (!showAssistantContent()) return;
+      assistant.content.setAttribute("data-answer-hydrated", "true");
+      typeText(node, text, showAssistantContent);
+    }).finally(() => {
+      if (activeEvidenceController === evidenceController) activeEvidenceController = null;
+    });
+
+    window.setTimeout(() => {
+      if (!showAssistantContent() || assistant.content.getAttribute("data-answer-hydrated") === "true") return;
+      typeText(assistant.content, answerText, showAssistantContent);
+    }, 120);
+  }
+
+  function typeText(node, text, shouldContinue = () => true) {
+    cancelTyping(node);
+    node.textContent = "";
+    const chunks = text.split(/(\s+)/);
+    let index = 0;
+    function tick() {
+      if (!node.isConnected || !shouldContinue()) {
+        cancelTyping(node);
+        return;
+      }
+      const next = chunks.slice(index, index + 3).join("");
+      node.textContent += next;
+      index += 3;
+      if (index < chunks.length) {
+        const timer = window.setTimeout(tick, 18);
+        typingTimers.set(node, timer);
+      } else {
+        typingTimers.delete(node);
+      }
+    }
+    tick();
+  }
+
+  window.DxMetasearchAnswer = {
+    cancel: abortActiveAnswerWork,
+    renderAnswer,
+    renderPending,
+  };
+})();

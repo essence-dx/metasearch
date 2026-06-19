@@ -1,0 +1,329 @@
+(() => {
+  const defaultLanguage = "en";
+  const sourceLimit = 14;
+  const primaryEvidenceLimit = 5;
+  const helloGlowDuration = 3000;
+  const SPAN_COUNT = 25;
+  const queryStopWords = new Set(["about", "detail", "details", "for", "from", "into", "near", "show", "the", "with"]);
+
+  function generateRainbowGradient(count) {
+    const stops = Array.from({ length: count + 1 }, (_, i) => {
+      const hue = (i / count) * 360;
+      return `hsl(${hue}, 80%, 60%)`;
+    });
+    return `linear-gradient(90deg, ${stops.join(", ")})`;
+  }
+
+  const RAINBOW_GRADIENT = generateRainbowGradient(SPAN_COUNT);
+
+  const categoryLabels = {
+    general: "General",
+    images: "Images",
+    videos: "Videos",
+    news: "News",
+    maps: "Maps",
+    music: "Music",
+    science: "Science",
+    it: "Code",
+    files: "Files",
+    social_media: "Social",
+  };
+
+  const fallbackLanguageOptions = [
+    ["en", "English"],
+    ["bn", "Bangla"],
+    ["hi", "Hindi"],
+    ["es", "Spanish"],
+    ["fr", "French"],
+    ["de", "German"],
+    ["ja", "Japanese"],
+    ["zh-CN", "Chinese"],
+    ["ar", "Arabic"],
+  ];
+
+  function languageOptions() {
+    const languages = window.DxMetasearchI18n?.languages;
+    return Array.isArray(languages) && languages.length > 0 ? languages : fallbackLanguageOptions;
+  }
+
+  function languageLabel(code) {
+    const normalized = String(code || defaultLanguage);
+    const match = languageOptions().find(([languageCode]) => languageCode === normalized);
+    return match ? match[1] : normalized;
+  }
+
+  function createElement(tagName, className, text) {
+    const node = document.createElement(tagName);
+    if (className) node.className = className;
+    if (text !== undefined && text !== null) node.textContent = String(text);
+    return node;
+  }
+
+  function appendHelloGlowChildren(parent, children) {
+    const childList = Array.isArray(children) ? children : [children];
+    for (const child of childList) {
+      if (child === undefined || child === null || child === false) continue;
+      if (typeof Node !== "undefined" && child instanceof Node) {
+        parent.append(child);
+      } else {
+        parent.append(document.createTextNode(String(child)));
+      }
+    }
+  }
+
+  function createHelloGlowOverlay(children) {
+    const overlay = createElement("div", "hello-glow-container hello-glow-overlay");
+    overlay.setAttribute("aria-hidden", "true");
+    overlay.style.setProperty("--hello-glow-gradient", RAINBOW_GRADIENT);
+
+    const content = createElement("div", "hello-glow-content");
+    appendHelloGlowChildren(content, children);
+
+    overlay.append(createElement("div", "hello-glow-background"), content);
+    return overlay;
+  }
+
+  function attachHelloGlow(target, children) {
+    if (!target) return () => {};
+    const overlay = createHelloGlowOverlay(children);
+    target.setAttribute("data-hello-glow-active", "true");
+    target.append(overlay);
+    let finished = false;
+    const timeoutId = window.setTimeout(remove, helloGlowDuration);
+    function remove() {
+      if (finished) return;
+      finished = true;
+      window.clearTimeout(timeoutId);
+      overlay.remove();
+      target.removeAttribute("data-hello-glow-active");
+    }
+    return remove;
+  }
+
+  function replaceChildren(parent, children) {
+    if (!parent) return;
+    parent.replaceChildren(...children.filter(Boolean));
+  }
+
+  function safeHttpUrl(value) {
+    return window.DxMetasearchUrlSafety?.safeHttpUrl(value) || "";
+  }
+
+  function decodeTextEntities(value) {
+    const text = String(value || "");
+    if (!text.includes("&")) return text;
+    try {
+      const textarea = document.createElement("textarea");
+      textarea.innerHTML = text;
+      return textarea.value;
+    } catch {
+      return text
+        .replace(/&amp;/g, "&")
+        .replace(/&lt;/g, "<")
+        .replace(/&gt;/g, ">")
+        .replace(/&quot;/g, '"')
+        .replace(/&#39;/g, "'");
+    }
+  }
+
+  function cleanText(value) {
+    return decodeTextEntities(String(value || "").replace(/<[^>]*>/g, " "))
+      .replace(/\s+/g, " ")
+      .trim();
+  }
+
+  function truncate(value, maxLength) {
+    const text = cleanText(value);
+    if (text.length <= maxLength) return text;
+    return `${text.slice(0, Math.max(0, maxLength - 1)).trim()}…`;
+  }
+
+  function hostname(value) {
+    try {
+      return new URL(value).hostname.replace(/^www\./, "");
+    } catch {
+      return "";
+    }
+  }
+
+  function compactUrl(value) {
+    try {
+      const url = new URL(value);
+      return `${url.hostname.replace(/^www\./, "")}${url.pathname}${url.search}`.slice(0, 110);
+    } catch {
+      return truncate(value, 110);
+    }
+  }
+
+  function resultSearchText(result) {
+    return cleanText([result?.title, result?.content, result?.url, result?.engine].filter(Boolean).join(" ")).toLowerCase();
+  }
+
+  function significantQueryTokens(query) {
+    return [...new Set(cleanText(query)
+      .toLowerCase()
+      .split(/[^a-z0-9]+/i)
+      .filter((token) => token.length > 2 && !queryStopWords.has(token)))];
+  }
+
+  function matchesQueryIntent(result, query) {
+    const tokens = significantQueryTokens(query);
+    if (tokens.length === 0) return true;
+    const haystack = resultSearchText(result);
+    const matches = tokens.filter((token) => haystack.includes(token)).length;
+    const required = tokens.length <= 2 ? tokens.length : Math.ceil(tokens.length * 0.55);
+    return matches >= required;
+  }
+
+  function isProviderErrorResult(result) {
+    const haystack = resultSearchText(result);
+    return haystack.includes("auto' is an invalid source language") || haystack.includes("auto is an invalid source language");
+  }
+
+  function isWeatherQuery(query) {
+    return /\b(weather|forecast|temperature|temp|rain|humidity|wind)\b/i.test(cleanText(query));
+  }
+
+  function isWeatherResult(result) {
+    const engine = cleanText(result?.engine).toLowerCase();
+    const title = cleanText(result?.title).toLowerCase();
+    return engine.includes("weather") || engine === "wttr" || title.startsWith("weather for ");
+  }
+
+  function hasNonEnglishScript(value) {
+    return /[\u0400-\u04ff\u0590-\u05ff\u0600-\u06ff\u0900-\u097f\u0980-\u09ff\u0e00-\u0e7f\u3040-\u30ff\u3400-\u9fff\uac00-\ud7af]/u.test(value);
+  }
+
+  function isLikelyEnglishResult(result) {
+    const text = cleanText([result?.title, result?.content].filter(Boolean).join(" "));
+    if (!text) return true;
+    if (hasNonEnglishScript(text)) return false;
+    const letters = text.match(/[A-Za-zÀ-ÖØ-öø-ÿ]/g) || [];
+    if (letters.length < 4) return true;
+    const otherLetters = text.replace(/[A-Za-zÀ-ÖØ-öø-ÿ0-9\s.,:;!?'"()[\]{}|/@#%&+=_*~`^<>-]/g, "");
+    return otherLetters.length / letters.length < 0.08;
+  }
+
+  function wantsEnglishResults(payload) {
+    return cleanText(payload?.language || defaultLanguage).toLowerCase().startsWith("en");
+  }
+
+  function isUsableResult(result, query, payload) {
+    if (!cleanText(result?.title || result?.content || result?.url)) return false;
+    if (isProviderErrorResult(result)) return false;
+    if (isWeatherResult(result) && !isWeatherQuery(query)) return false;
+    if (wantsEnglishResults(payload) && !isLikelyEnglishResult(result)) return false;
+    return matchesQueryIntent(result, query);
+  }
+
+  function sourceResults(payload) {
+    const query = cleanText(payload?.query);
+    return (Array.isArray(payload.results) ? payload.results : [])
+      .filter((result) => isUsableResult(result, query, payload))
+      .slice(0, sourceLimit);
+  }
+
+  function resultCategory(result, fallback) {
+    const category = String(result?.category || fallback || "general").trim().toLowerCase();
+    if (category === "code" || category === "dev") return "it";
+    if (category === "social" || category === "socialmedia") return "social_media";
+    if (category === "video") return "videos";
+    if (category === "image") return "images";
+    if (category === "map") return "maps";
+    return categoryLabels[category] ? category : "general";
+  }
+
+  function categoryLabel(category) {
+    return categoryLabels[resultCategory({ category }, category)] || "General";
+  }
+
+  function resultSource(result) {
+    return hostname(result.url) || cleanText(result.engine);
+  }
+
+  function resultSignal(result, fallbackCategory) {
+    const category = categoryLabel(resultCategory(result, fallbackCategory));
+    const source = resultSource(result);
+    return [category, source].filter(Boolean).join(" · ");
+  }
+
+  function resultLead(index) {
+    if (index === 0) return "Strongest signal";
+    if (index === 1) return "Useful context";
+    return "Good next source";
+  }
+
+  function resultCountLabel(payload, results) {
+    const total = Number(payload.number_of_results || results.length || 0);
+    if (!Number.isFinite(total) || total <= 0) return "";
+    return `${total.toLocaleString()} live result${total === 1 ? "" : "s"}`;
+  }
+
+  function engineCountLabel(payload, results) {
+    const engines = Array.isArray(payload.engines_used) && payload.engines_used.length > 0
+      ? payload.engines_used
+      : [...new Set(results.map((result) => cleanText(result.engine)).filter(Boolean))];
+    if (engines.length === 0) return "";
+    return `${engines.length.toLocaleString()} engine${engines.length === 1 ? "" : "s"}`;
+  }
+
+  function buildAnswerText(payload, state) {
+    const query = cleanText(payload.query || state.query);
+    const results = sourceResults(payload);
+    if (results.length === 0) {
+      return query
+        ? `I’m still looking for enough reliable live results on "${query}". Try a broader query or switch to another result tab.`
+        : "I’m still looking for enough reliable live results. Try a broader query or switch to another result tab.";
+    }
+
+    const topResults = results.slice(0, primaryEvidenceLimit);
+    const resultCount = resultCountLabel(payload, results);
+    const engineCount = engineCountLabel(payload, results);
+    const scope = [resultCount, engineCount].filter(Boolean).join(" across ");
+    const intro = query
+      ? `Here are the search results for "${query}".`
+      : "Here are the search results.";
+    const context = scope
+      ? `I scanned ${scope} and pulled out the highest-signal links first.`
+      : "I pulled out the highest-signal links first.";
+    const bullets = topResults.map((result, index) => {
+      const title = truncate(result.title || result.url, 92);
+      const snippet = truncate(result.content || compactUrl(result.url), 190);
+      const signal = resultSignal(result, state.category);
+      return `${resultLead(index)}${signal ? ` (${signal})` : ""}: ${title}. ${snippet}`;
+    });
+    const sources = results
+      .map(resultSource)
+      .filter(Boolean)
+      .slice(0, 4)
+      .join(", ");
+
+    return [
+      intro,
+      context,
+      ...bullets,
+      sources ? `The source cards below keep the best links ready: ${sources}.` : "",
+    ]
+      .filter(Boolean)
+      .join("\n\n");
+  }
+
+  window.DxMetasearchAnswerCommon = {
+    buildAnswerText,
+    categoryLabel,
+    attachHelloGlow,
+    cleanText,
+    compactUrl,
+    createElement,
+    defaultLanguage,
+    hostname,
+    languageLabel,
+    languageOptions,
+    primaryEvidenceLimit,
+    replaceChildren,
+    resultCategory,
+    safeHttpUrl,
+    sourceResults,
+    truncate,
+  };
+})();
