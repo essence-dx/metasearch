@@ -497,14 +497,7 @@ export const dxAutoImportMap = {
   ],
   "composables": [],
   "utilities": [],
-  "forgePackages": [
-    {
-      "packageId": "www/minimal-starter",
-      "source": "forge/www/minimal-starter",
-      "importPath": "@/forge/www/minimal-starter",
-      "exports": []
-    }
-  ],
+  "forgePackages": [],
   "styleHelpers": [
     {
       "name": "generated.css",
@@ -517,7 +510,7 @@ export const dxAutoImportMap = {
       "importPath": "@/styles/theme.css"
     }
   ],
-  "sourceHash": "blake3:b50aa6afed2d6f7802da49e0366a2879a63682ab24f1e68cdf43a924fda6c161"
+  "sourceHash": "blake3:b59fb376c78ae8dbda1015c2c8bc352b72a2be091fa41124a507d3d0aa81459c"
 } as const;
 
 export type DxAutoImportComponent = typeof dxAutoImportMap.components[number]["name"];
