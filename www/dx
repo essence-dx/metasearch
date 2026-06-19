@@ -1,4 +1,4 @@
-project(name="metasearch-www" version=0.1.0 kind=www-app)
+project(name="metasearch" version=0.1.0 kind=www-app)
 
 www(
    app_dir=app
