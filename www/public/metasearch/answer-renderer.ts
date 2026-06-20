@@ -84,14 +84,23 @@
     hydrateAnswerEvidence(shell, evidence.section, evidence, payload, state, apiOrigin, assistant.content, evidenceController.signal, (node, text) => {
       if (!showAssistantContent()) return;
       assistant.content.setAttribute("data-answer-hydrated", "true");
-      typeText(node, text, showAssistantContent);
+      if (payload._hasAnimated) {
+        node.textContent = text;
+      } else {
+        typeText(node, text, showAssistantContent);
+      }
     }).finally(() => {
       if (activeEvidenceController === evidenceController) activeEvidenceController = null;
     });
 
     window.setTimeout(() => {
       if (!showAssistantContent() || assistant.content.getAttribute("data-answer-hydrated") === "true") return;
-      typeText(assistant.content, answerText, showAssistantContent);
+      if (payload._hasAnimated) {
+        assistant.content.textContent = answerText;
+      } else {
+        payload._hasAnimated = true;
+        typeText(assistant.content, answerText, showAssistantContent);
+      }
     }, 120);
   }
 

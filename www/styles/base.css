@@ -337,7 +337,7 @@ summary::-webkit-details-marker {
   top: 0;
   display: grid;
   gap: 10px;
-  width: min(100%, 1540px);
+  width: 100%;
   margin: 0 auto;
   border-bottom: 1px solid hsl(var(--border));
   background: hsl(var(--background) / 0.94);

@@ -1,9 +1,9 @@
 (() => {
   const cacheTtlMs = 5 * 60 * 1000;
-  const backgroundPrefetchCategories = new Set(["general", "videos", "news", "it", "files"]);
+  const backgroundPrefetchCategories = new Set(["general", "images", "videos", "news", "it", "files"]);
   const maxCachedSearches = 32;
-  const maxPrefetchRequests = 2;
-  const prefetchDelayMs = 120;
+  const maxPrefetchRequests = 6;
+  const prefetchDelayMs = 30;
   const prefetchTimeoutMs = 3000;
 
   function createSearchScheduler(config) {
@@ -31,10 +31,20 @@
     }
 
     function readCachedPayload(key) {
-      const entry = resultCache.get(key);
+      let entry = resultCache.get(key);
+      if (!entry) {
+        try {
+          const stored = localStorage.getItem(`dx_cache_${key}`);
+          if (stored) {
+            entry = JSON.parse(stored);
+            resultCache.set(key, entry);
+          }
+        } catch (e) {}
+      }
       if (!entry) return null;
       if (Date.now() - entry.storedAt > cacheTtlMs) {
         resultCache.delete(key);
+        try { localStorage.removeItem(`dx_cache_${key}`); } catch (e) {}
         return null;
       }
       resultCache.delete(key);
@@ -43,11 +53,14 @@
     }
 
     function storeCachedPayload(key, payload) {
-      resultCache.set(key, { payload, storedAt: Date.now() });
+      const entry = { payload, storedAt: Date.now() };
+      resultCache.set(key, entry);
+      try { localStorage.setItem(`dx_cache_${key}`, JSON.stringify(entry)); } catch (e) {}
       while (resultCache.size > maxCachedSearches) {
         const oldestKey = resultCache.keys().next().value;
         if (!oldestKey) break;
         resultCache.delete(oldestKey);
+        try { localStorage.removeItem(`dx_cache_${oldestKey}`); } catch (e) {}
       }
     }
 
