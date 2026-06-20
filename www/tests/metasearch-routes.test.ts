@@ -45,7 +45,7 @@ test("metasearch API search path preserves the JSON result contract", () => {
     engines: "bing, google",
   });
   const url = new URL(path, "http://127.0.0.1:3001");
-  expect(url.pathname).toBe("/api/v1/search");
+  expect(url.pathname).toBe("/api/search");
   expect(url.searchParams.get("q")).toBe("tenali rama");
   expect(url.searchParams.get("format")).toBe("json");
   expect(url.searchParams.get("categories")).toBe("videos");
@@ -135,9 +135,9 @@ test("API links stay on the DX WWW same-origin API boundary", () => {
 });
 
 test("metasearchApiUrl normalizes API paths", () => {
-  expect(metasearchApiUrl("/api/v1/status")).toBe("/api/v1/status");
-  expect(metasearchApiUrl("api/v1/status")).toBe("/api/v1/status");
-  expect(metasearchApiLinks.translate).toBe("/api/v1/translate");
+  expect(metasearchApiUrl("/api/status")).toBe("/api/status");
+  expect(metasearchApiUrl("api/status")).toBe("/api/status");
+  expect(metasearchApiLinks.translate).toBe("/api/translate");
 });
 
 test("runtime asset stays TypeScript while fetching live API data", () => {

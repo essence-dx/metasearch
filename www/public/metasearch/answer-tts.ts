@@ -474,7 +474,7 @@
   }
 
   async function translateWithLocalApi(text, targetLanguage) {
-    const url = new URL("/api/v1/translate", window.location.origin);
+    const url = new URL("/api/translate", window.location.origin);
     url.searchParams.set("text", text);
     url.searchParams.set("target", targetLanguage || defaultLanguage);
     const response = await fetch(url.toString(), { cache: "no-store", headers: { accept: "application/json" } });

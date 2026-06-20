@@ -93,7 +93,7 @@ test("answer TTS can request the local Flow Kokoro bridge with a safe fallback",
 });
 
 test("answer translation uses same-origin API first with direct Google fallback and chunking", () => {
-  expect(ttsSource).toContain("/api/v1/translate");
+  expect(ttsSource).toContain("/api/translate");
   expect(ttsSource).toContain("translateWithLocalApi");
   expect(ttsSource).toContain("translateWithGoogle");
   expect(ttsSource).toContain("translationChunks");

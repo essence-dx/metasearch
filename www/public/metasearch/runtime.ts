@@ -251,7 +251,7 @@
     params.set("format", "json");
     params.set("categories", apiSearchCategories(state.category));
     params.delete("category");
-    const url = new URL("/api/v1/search", apiOrigin);
+    const url = new URL("/api/search", apiOrigin);
     url.search = params.toString();
     return url.toString();
   }

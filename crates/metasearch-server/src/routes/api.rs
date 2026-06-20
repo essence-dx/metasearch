@@ -45,11 +45,11 @@ pub struct ApiTranslateParams {
 
 pub fn routes() -> Router<Arc<AppState>> {
     Router::new()
-        .route("/api/v1/search", get(api_search))
-        .route("/api/v1/translate", get(api_translate))
-        .route("/api/v1/engines", get(api_engines))
-        .route("/api/v1/config", get(api_config))
-        .route("/api/v1/status", get(api_status))
+        .route("/api/search", get(api_search))
+        .route("/api/translate", get(api_translate))
+        .route("/api/engines", get(api_engines))
+        .route("/api/config", get(api_config))
+        .route("/api/status", get(api_status))
 }
 
 async fn api_search(

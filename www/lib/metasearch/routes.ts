@@ -125,7 +125,7 @@ export function metasearchApiSearchPath({
   params.set("language", language);
   params.set("safe_search", String(safeSearch));
   appendOptionalFilters(params, { timeRange, engines });
-  return `/api/v1/search?${params.toString()}`;
+  return `/api/search?${params.toString()}`;
 }
 
 export const metasearchPageLinks = {
@@ -133,11 +133,11 @@ export const metasearchPageLinks = {
 } as const;
 
 export const metasearchApiLinks = {
-  config: metasearchApiUrl("/api/v1/config"),
-  engines: metasearchApiUrl("/api/v1/engines"),
-  search: metasearchApiUrl("/api/v1/search"),
-  status: metasearchApiUrl("/api/v1/status"),
-  translate: metasearchApiUrl("/api/v1/translate"),
+  config: metasearchApiUrl("/api/config"),
+  engines: metasearchApiUrl("/api/engines"),
+  search: metasearchApiUrl("/api/search"),
+  status: metasearchApiUrl("/api/status"),
+  translate: metasearchApiUrl("/api/translate"),
   live: metasearchApiUrl("/livez"),
   ready: metasearchApiUrl("/readyz"),
   health: metasearchApiUrl("/health"),

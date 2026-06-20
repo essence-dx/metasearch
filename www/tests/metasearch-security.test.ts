@@ -11,7 +11,7 @@ const runtimeSource = readFileSync("public/metasearch/runtime.ts", "utf8");
 const schedulerSource = readFileSync("public/metasearch/search-scheduler.ts", "utf8");
 const answerEvidenceSource = readFileSync("public/metasearch/answer-evidence.ts", "utf8");
 const resultCardsSource = readFileSync("public/metasearch/result-cards.ts", "utf8");
-const routeSource = readFileSync("app/api/v1/search/route.ts", "utf8");
+const routeSource = readFileSync("app/api/search/route.ts", "utf8");
 const routesTestSource = readFileSync("tests/metasearch-routes.test.ts", "utf8");
 
 test("browser result renderers share an HTTP-only URL safety module", () => {
@@ -35,7 +35,7 @@ test("answer prompt postMessage is same-origin by default", () => {
 test("search API stays on the DX WWW origin", () => {
   expect(pageSource.includes("127.0.0.1:8888")).toBe(false);
   expect(runtimeSource.includes("127.0.0.1:8888")).toBe(false);
-  expect(runtimeSource).toContain("new URL(\"/api/v1/search\", apiOrigin)");
+  expect(runtimeSource).toContain("new URL(\"/api/search\", apiOrigin)");
   expect(routeSource).toContain("createDxMetasearchSearchResponse");
 });
 

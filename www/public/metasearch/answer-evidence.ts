@@ -28,7 +28,7 @@
   }
 
   function categoryEvidenceUrl(apiOrigin, state, category, useEngineFilter) {
-    const url = new URL("/api/v1/search", apiOrigin || window.location.origin);
+    const url = new URL("/api/search", apiOrigin || window.location.origin);
     url.searchParams.set("q", cleanText(state.query));
     url.searchParams.set("format", "json");
     url.searchParams.set("categories", category);

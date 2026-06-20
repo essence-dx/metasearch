@@ -1,10 +1,10 @@
 export type DxMetasearchSearchRoute = {
-  path: "/api/v1/search";
+  path: "/api/search";
   runtime: "dx-www-axum";
 };
 
 export const dxMetasearchSearchRoute = {
-  path: "/api/v1/search",
+  path: "/api/search",
   runtime: "dx-www-axum",
 } as const satisfies DxMetasearchSearchRoute;
 
