@@ -27,6 +27,21 @@ export default function HomePage() {
 
       <SearchControls />
 
+      <main className="results-shell" id="results">
+        <section className="results-main" aria-label="Search results">
+          <div className="results-status" data-results-status="true" aria-live="polite" />
+          <div className="result-list" data-result-list="true" />
+        </section>
+
+        <aside className="response-shell">
+          <div className="response-summary" data-response-summary="true" aria-live="polite" />
+          <div className="response-details" data-response-details="true" />
+          <div className="engine-list" data-engine-list="true" />
+          <div className="failed-engine-panel" data-failed-engine-panel="true" hidden>
+            <div className="failed-engine-list" data-failed-engine-list="true" />
+          </div>
+        </aside>
+      </main>
       <script src="/public/metasearch/url-safety.ts" defer></script>
       <script src="/public/metasearch/i18n-languages.ts" defer></script>
       <script src="/public/metasearch/answer-common.ts" defer></script>
