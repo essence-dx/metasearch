@@ -177,32 +177,28 @@
         replaceSearchUrl(state);
       }
 
-      if (!state.query) {
-        config.setStatus("", "neutral");
-        config.clearResults();
-        return;
-      }
+      const fetchState = state.query ? state : { ...state, query: "latest news of today", category: "news" };
 
-      const key = cacheKey(state);
+      const key = cacheKey(fetchState);
       const cachedPayload = readCachedPayload(key);
       if (cachedPayload) {
-        config.renderPayload(cachedPayload, state);
+        config.renderPayload(cachedPayload, fetchState);
         config.setStatus("", "ready");
-        queueCategoryPrefetches(state);
+        queueCategoryPrefetches(fetchState);
         return;
       }
 
       config.setStatus("", "loading");
-      if (typeof config.showPendingState === "function") config.showPendingState(state);
+      if (typeof config.showPendingState === "function") config.showPendingState(fetchState);
       else config.clearResults();
       const pendingPrefetch = prefetchRequests.get(key);
       if (pendingPrefetch) {
         const payload = await pendingPrefetch;
         if (requestId !== activeRequestId) return;
         if (payload) {
-          config.renderPayload(payload, state);
+          config.renderPayload(payload, fetchState);
           config.setStatus("", "ready");
-          queueCategoryPrefetches(state);
+          queueCategoryPrefetches(fetchState);
           return;
         }
       }
@@ -210,12 +206,12 @@
       const controller = new AbortController();
       activeController = controller;
       try {
-        const payload = await fetchSearchPayload(state, controller.signal);
+        const payload = await fetchSearchPayload(fetchState, controller.signal);
         if (requestId !== activeRequestId) return;
         storeCachedPayload(key, payload);
-        config.renderPayload(payload, state);
+        config.renderPayload(payload, fetchState);
         config.setStatus("", "ready");
-        queueCategoryPrefetches(state);
+        queueCategoryPrefetches(fetchState);
       } catch (error) {
         if (error instanceof DOMException && error.name === "AbortError") return;
         if (requestId !== activeRequestId) return;

@@ -67,6 +67,14 @@
     return link;
   }
 
+  function titleWithHovercard(linkElement, text) {
+    const wrapper = createElement("div");
+    if (text) wrapper.setAttribute("data-tooltip", text);
+    wrapper.style.minWidth = "0";
+    wrapper.append(linkElement);
+    return wrapper;
+  }
+
   function renderImageResult(result, index, category) {
     const card = markResult(createElement("a", "image-card"), result, index, category);
     const href = safeHttpUrl(result.url);
@@ -98,7 +106,8 @@
     const content = createElement("div", "video-info");
     const meta = createElement("div", "video-meta source-row");
     meta.append(...resultMeta(result), ...resultMetadataChips(result));
-    content.append(externalLink("video-title", result, result.title || result.url), meta, renderSnippet(result, category, "video-desc"));
+    const titleText = result.title || result.url;
+    content.append(titleWithHovercard(externalLink("video-title", result, titleText), titleText), meta, renderSnippet(result, category, "video-desc"));
     article.append(media, content);
     return article;
   }
@@ -113,7 +122,8 @@
     const content = createElement("div", "news-body");
     const meta = createElement("div", "source-row");
     meta.append(...resultMeta(result));
-    content.append(meta, externalLink("news-title", result, result.title || result.url), renderSnippet(result, category, "news-snippet"));
+    const titleText = result.title || result.url;
+    content.append(meta, titleWithHovercard(externalLink("news-title", result, titleText), titleText), renderSnippet(result, category, "news-snippet"));
     article.append(content);
     return article;
   }
@@ -125,7 +135,8 @@
     const content = createElement("div", "music-info");
     const meta = createElement("div", "result-tags");
     meta.append(...resultMeta(result), ...resultMetadataChips(result));
-    content.append(externalLink("music-title", result, result.title || result.url), renderSnippet(result, category, "music-desc"), meta);
+    const titleText = result.title || result.url;
+    content.append(titleWithHovercard(externalLink("music-title", result, titleText), titleText), renderSnippet(result, category, "music-desc"), meta);
     article.append(art, content);
     return article;
   }
@@ -134,14 +145,16 @@
     const article = markResult(createElement("article", "result-card"), result, index, category);
     const meta = createElement("div", "source-row");
     meta.append(...resultMeta(result));
+    const titleText = result.title || result.url;
     const title = createElement("h2");
-    title.append(externalLink("", result, result.title || result.url));
+    title.append(externalLink("", result, titleText));
+    const titleWrapper = titleWithHovercard(title, titleText);
     const snippet = renderSnippet(result, category, "result-snippet");
     const display = externalLink("display-url", result, compactUrl(result.url));
     const chips = createElement("div", "result-tags");
     chips.append(...resultMetadataChips(result));
     const content = createElement("div", "result-content");
-    content.append(meta, title, snippet, display);
+    content.append(meta, titleWrapper, snippet, display);
     if (chips.childElementCount > 0) content.append(chips);
     if (result.thumbnail) {
       const media = externalLink("result-media", result, "");

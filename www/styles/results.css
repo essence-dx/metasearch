@@ -1430,6 +1430,7 @@
   padding: 12px;
   box-shadow: 0 1px 0 hsl(var(--foreground) / 0.03);
   width: 100%;
+  overflow: hidden;
 }
 
 .result-card:not(:has(.result-media)) {
@@ -1523,6 +1524,10 @@
   font-size: 1.02rem;
   line-height: 1.3;
   overflow-wrap: anywhere;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  overflow: hidden;
 }
 
 .result-card h2 a:hover,
@@ -1668,6 +1673,7 @@
   padding: 12px;
   box-shadow: 0 1px 0 hsl(var(--foreground) / 0.03);
   width: 100%;
+  overflow: hidden;
 }
 
 .video-card {
@@ -1815,17 +1821,19 @@
   font-weight: 780;
   line-height: 1.35;
   overflow-wrap: anywhere;
-}
-
-.video-title {
   display: -webkit-box;
-  font-size: 1rem;
   -webkit-box-orient: vertical;
   -webkit-line-clamp: 2;
   overflow: hidden;
 }
 
+.video-title {
+  font-size: 1rem;
+}
+
 .video-meta {
+  display: flex;
+  flex-wrap: wrap;
   gap: 5px;
   overflow: hidden;
 }
