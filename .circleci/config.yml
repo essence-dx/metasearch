@@ -68,9 +68,13 @@ jobs:
             $env:GH_TOKEN = [System.Environment]::GetEnvironmentVariable("CIRCLECI_GH_TOKEN")
             $tag = "windows"
             gh release create $tag --repo essence-dx/metasearch --title "Windows Release" --target $env:CIRCLE_SHA1 2>$null; $LASTEXITCODE = 0
-            $zipFiles = (Get-ChildItem "dist\*.zip").FullName
+            $zipFiles = Get-ChildItem "dist\*.zip"
             if ($zipFiles) {
-                gh release upload $tag @zipFiles --repo essence-dx/metasearch --clobber
+                Push-Location dist
+                foreach ($zipFile in $zipFiles) {
+                    gh release upload $tag $zipFile.Name --repo essence-dx/metasearch --clobber
+                }
+                Pop-Location
             } else {
                 Write-Error "No zip files found in dist\"
                 exit 1
