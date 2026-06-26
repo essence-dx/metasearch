@@ -10,6 +10,19 @@
 #     Only use `native` for self-hosted deployments on known hardware.
 rustflags = ["-C", "target-cpu=native"]
 
+[target.aarch64-unknown-linux-gnu]
+# aarch64 has no concept of "native" - use generic instead
+rustflags = []
+
+[target.aarch64-unknown-linux-musl]
+rustflags = []
+
+[target.aarch64-apple-darwin]
+rustflags = []
+
+[target.x86_64-apple-darwin]
+rustflags = []
+
 # Alternatively, for slightly-less-specific but portable tuning that still
 # enables AVX2 (required by most SIMD crates), use:
 # rustflags = ["-C", "target-cpu=x86-64-v3"]
