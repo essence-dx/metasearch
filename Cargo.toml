@@ -117,3 +117,6 @@ arcstr = "1"  # Atomically reference-counted static strings
 
 # Performance - Fast hashing
 ahash = "0.8"  # For moka hasher and hot-path maps
+
+# Directories
+dirs = "6.0"

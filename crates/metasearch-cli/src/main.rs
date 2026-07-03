@@ -304,6 +304,7 @@ async fn main() -> anyhow::Result<()> {
     }
 
     dx.write_sr("metasearch", &[("tool", "metasearch"), ("action", "run"), ("status", "ok")])?;
+    dx.write_global_sr("metasearch", &[("tool", "metasearch"), ("action", "run"), ("status", "ok")])?;
     if let Some(status) = dx.read_status("metasearch") {
         eprintln!("[metasearch] sr cache verified: {} entries", status.len());
     }
