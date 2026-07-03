@@ -1,9 +1,14 @@
 //! Metasearch CLI — entry point for the application.
+//!
+//! Loads the DX workspace config on startup, creates required directories,
+//! then dispatches to the requested subcommand.
 
 // mimalloc: 2-6x faster than system allocator, critical on musl targets.
 // Works on all platforms (Windows, Linux, macOS, Alpine/musl).
 #[global_allocator]
 static GLOBAL: mimalloc::MiMalloc = mimalloc::MiMalloc;
+
+mod dx_config;
 
 use std::{path::Path, sync::Arc};
 
@@ -116,6 +121,12 @@ async fn main() -> anyhow::Result<()> {
         .with_writer(std::io::stderr)
         .with_env_filter(EnvFilter::from_default_env().add_directive("metasearch=info".parse()?))
         .init();
+
+    // Load DX workspace configuration and create required directories.
+    let dx = dx_config::MetasearchDxConfig::load();
+    tracing::info!(workspace_root = %dx.workspace_root.display(), "dx config loaded");
+    std::fs::create_dir_all(&dx.sr_dir).ok();
+    std::fs::create_dir_all(&dx.receipts_dir).ok();
 
     let cli = Cli::parse();
 
@@ -292,6 +303,10 @@ async fn main() -> anyhow::Result<()> {
         }
     }
 
+    dx.write_sr("metasearch", &[("tool", "metasearch"), ("action", "run"), ("status", "ok")])?;
+    if let Some(status) = dx.read_status("metasearch") {
+        eprintln!("[metasearch] sr cache verified: {} entries", status.len());
+    }
     Ok(())
 }
 
