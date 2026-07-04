@@ -30,4 +30,4 @@ mimalloc.workspace = true
 dirs.workspace = true
 
 # DX Serializer (.sr / .machine format)
-serializer = { path = "../../../serializer", package = "dx-serializer", version = "0.1.0" }
+serializer = { path = "../../../serializer", package = "dx-serializer", version = "1.0.0" }
