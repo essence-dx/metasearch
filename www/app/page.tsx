@@ -22,7 +22,7 @@ export default function HomePage() {
           </span>
         </a>
 
-        {/* <SearchToolbar /> */}
+        <SearchToolbar />
       </header>
 
       <SearchControls />

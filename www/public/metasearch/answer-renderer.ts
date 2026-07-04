@@ -59,12 +59,15 @@
     const evidenceController = new AbortController();
     activeEvidenceController = evidenceController;
     const language = state.language || defaultLanguage;
-    const answerText = buildAnswerText(payload, state);
+    const hardcodeText = buildAnswerText(payload, state);
     const shell = createElement("section", "answer-thread");
     shell.setAttribute("data-result-card", "true");
 
     const user = renderMessage("user", cleanText(state.query || payload.query), { speaker: true, language });
-    const assistant = renderMessage("assistant", "", { assistant: true, latest: true, language, sourceText: answerText });
+
+    const summary = window.DxMetasearchAnswerSummary;
+    const initialModel = summary ? "…" : "hardcode";
+    const assistant = renderMessage("assistant", "", { assistant: true, latest: true, language, sourceText: hardcodeText, modelName: initialModel });
     const shimmer = createElement("p", "answer-shimmer", "Composing the source-backed answer");
     assistant.content.replaceWith(shimmer);
     const media = renderMediaStage(payload, state);
@@ -75,33 +78,42 @@
     shell.append(evidence.section);
     disposeExistingMedia(elements);
     replaceChildren(elements.resultList, [shell]);
-    function showAssistantContent() {
-      if (!shell.isConnected || renderId !== answerRenderId) return false;
-      if (shimmer.isConnected) shimmer.replaceWith(assistant.content);
-      return true;
-    }
 
-    hydrateAnswerEvidence(shell, evidence.section, evidence, payload, state, apiOrigin, assistant.content, evidenceController.signal, (node, text) => {
-      if (!showAssistantContent()) return;
-      assistant.content.setAttribute("data-answer-hydrated", "true");
+    let answerPopulated = false;
+
+    function populateAnswer(node, text) {
+      if (!shell.isConnected || renderId !== answerRenderId || answerPopulated) return;
+      answerPopulated = true;
+      const isHardcode = node.getAttribute("data-ai-sourced") !== "true";
+      const modelName = isHardcode ? "hardcode" : (summary?.selectedModel?.display || summary?.DEFAULT_MODEL?.display || "AI");
+      const badge = assistant.message.querySelector("[data-answer-model-badge]");
+      if (badge) {
+        badge.textContent = modelName;
+        badge.classList.toggle("answer-model-badge--hardcode", isHardcode);
+      }
+      if (shimmer.isConnected) shimmer.replaceWith(node);
+      node.setAttribute("data-answer-hydrated", "true");
       if (payload._hasAnimated) {
         node.textContent = text;
       } else {
-        typeText(node, text, showAssistantContent);
+        payload._hasAnimated = true;
+        typeText(node, text, () => shell.isConnected && renderId === answerRenderId);
       }
-    }).finally(() => {
-      if (activeEvidenceController === evidenceController) activeEvidenceController = null;
-    });
+    }
+
+    hydrateAnswerEvidence(shell, evidence.section, evidence, payload, state, apiOrigin, assistant.content, evidenceController.signal, populateAnswer)
+      .finally(() => {
+        if (activeEvidenceController === evidenceController) activeEvidenceController = null;
+        if (!answerPopulated && shell.isConnected && renderId === answerRenderId) {
+          populateAnswer(assistant.content, hardcodeText);
+        }
+      });
 
     window.setTimeout(() => {
-      if (!showAssistantContent() || assistant.content.getAttribute("data-answer-hydrated") === "true") return;
-      if (payload._hasAnimated) {
-        assistant.content.textContent = answerText;
-      } else {
-        payload._hasAnimated = true;
-        typeText(assistant.content, answerText, showAssistantContent);
+      if (!answerPopulated && shell.isConnected && renderId === answerRenderId) {
+        populateAnswer(assistant.content, hardcodeText);
       }
-    }, 120);
+    }, 12000);
   }
 
   function typeText(node, text, shouldContinue = () => true) {

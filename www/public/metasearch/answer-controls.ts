@@ -51,6 +51,16 @@
         }),
         createElement("span", "answer-tts-status"),
       );
+      if (options.modelName) {
+        if (window.DxMetasearchAnswerSummary) {
+          actions.append(modelPicker());
+        } else {
+          const badge = createElement("span", "answer-model-badge", options.modelName);
+          badge.classList.add("answer-model-badge--hardcode");
+          badge.setAttribute("data-answer-model-badge", "true");
+          actions.append(badge);
+        }
+      }
     }
     message.append(bubble);
     if (actions.childElementCount > 0) {
@@ -348,6 +358,83 @@
   function selectedTtsProvider(actions) {
     const picker = actions.querySelector(".answer-tts-provider-picker");
     return picker ? picker.getAttribute("data-tts-provider") || defaultTtsProvider : defaultTtsProvider;
+  }
+
+  function modelPicker() {
+    const summary = window.DxMetasearchAnswerSummary;
+    if (!summary) return createElement("span", "answer-model-badge answer-model-badge--hardcode", "hardcode");
+
+    const models = summary.getModelList();
+    const current = models.find((m) => m.key === summary.selectedModelKey) || models[0];
+    const picker = createElement("div", "answer-model-picker");
+    picker.setAttribute("data-model", current.key);
+
+    const trigger = createElement("button", "answer-model-trigger");
+    trigger.type = "button";
+    trigger.title = "Summarization model";
+    trigger.setAttribute("aria-label", "Summarization model");
+    trigger.setAttribute("data-tooltip", "Summarization model");
+    trigger.setAttribute("aria-haspopup", "listbox");
+    trigger.setAttribute("aria-expanded", "false");
+
+    const label = createElement("span", "answer-model-label", current.display);
+    trigger.append(label, iconNode("chevron-down"));
+
+    const panel = createElement("div", "answer-model-panel");
+    panel.hidden = true;
+    panel.setAttribute("role", "listbox");
+
+    function setOpen(open) {
+      panel.hidden = !open;
+      trigger.setAttribute("aria-expanded", String(open));
+      picker.classList.toggle("is-open", open);
+    }
+
+    function selectModel(key) {
+      summary.setModel(key);
+      picker.setAttribute("data-model", key);
+      const m = models.find((x) => x.key === key) || current;
+      label.textContent = m.display;
+      setOpen(false);
+    }
+
+    function renderOptions() {
+      const activeKey = picker.getAttribute("data-model") || summary.selectedModelKey;
+      replaceChildren(
+        panel,
+        models.map((m) => {
+          const option = createElement("button", "answer-model-option");
+          option.type = "button";
+          option.setAttribute("role", "option");
+          option.setAttribute("aria-selected", String(m.key === activeKey));
+          option.setAttribute("data-model-option", m.key);
+          option.append(createElement("span", "answer-model-option-label", m.display));
+          if (m.key === activeKey) option.append(iconNode("check"));
+          option.addEventListener("click", () => selectModel(m.key));
+          return option;
+        }),
+      );
+    }
+
+    trigger.addEventListener("click", () => {
+      renderOptions();
+      setOpen(panel.hidden);
+    });
+    picker.addEventListener("keydown", (event) => {
+      if (event.key === "Escape") setOpen(false);
+    });
+    document.addEventListener("click", (event) => {
+      if (!picker.contains(event.target)) setOpen(false);
+    });
+    window.addEventListener("dx:metasearch-model-change", () => {
+      const activeKey = summary.selectedModelKey;
+      const m = models.find((x) => x.key === activeKey) || current;
+      label.textContent = m.display;
+      picker.setAttribute("data-model", activeKey);
+    });
+
+    picker.append(trigger, panel);
+    return picker;
   }
 
   async function copyText(text) {

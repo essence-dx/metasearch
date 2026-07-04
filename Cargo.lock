@@ -1126,6 +1126,7 @@ dependencies = [
  "blake3",
  "bytemuck",
  "bytes",
+ "dirs",
  "hashbrown 0.15.5",
  "indexmap",
  "libc",

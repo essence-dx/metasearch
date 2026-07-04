@@ -198,6 +198,7 @@
           signal
         );
         if (aiText && !signal?.aborted && answerIsMounted()) {
+          assistantContent.setAttribute("data-ai-sourced", "true");
           assistantContent.setAttribute("data-source-text", aiText);
           typeText(assistantContent, aiText);
           hydrateMediaStage();
@@ -208,8 +209,9 @@
       }
     }
 
-    if (assistantContent && sourceResults(payload).length === 0 && allResults.length > 0) {
+    if (assistantContent && allResults.length > 0) {
       const answerText = buildAnswerText(mergedEvidence, state);
+      assistantContent.setAttribute("data-ai-sourced", "false");
       assistantContent.setAttribute("data-source-text", answerText);
       if (signal?.aborted || !answerIsMounted()) return;
       typeText(assistantContent, answerText);

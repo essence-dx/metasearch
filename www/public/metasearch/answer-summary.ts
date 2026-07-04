@@ -2,18 +2,35 @@
   const API_URL = "https://opencode.ai/zen";
   const API_KEY = "public";
 
-  // 6 free AI models from opencode crate
+  // 5 free AI models from OpenCode Zen (https://opencode.ai/zen)
   const FREE_MODELS = {
-    bigPickle: { id: "high", protocol: "openai_chat", display: "High" },
-    deepSeekV4FlashFree: { id: "xhigh", protocol: "openai_chat", display: "XHigh" },
-    mimoV2_5Free: { id: "default", protocol: "openai_chat", display: "Default" },
-    miniMaxM3Free: { id: "low", protocol: "anthropic", display: "Low" },
-    nemotron3SuperFree: { id: "medium", protocol: "openai_chat", display: "Medium" },
-    nemotron3UltraFree: { id: "xlow", protocol: "openai_chat", display: "XLow" },
+    bigPickle: { id: "big-pickle", protocol: "openai_chat", display: "Big Pickle" },
+    deepSeekV4FlashFree: { id: "deepseek-v4-flash-free", protocol: "openai_chat", display: "Flash Free" },
+    mimoV2_5Free: { id: "mimo-v2.5-free", protocol: "openai_chat", display: "MiMo V2.5" },
+    northMiniCodeFree: { id: "north-mini-code-free", protocol: "openai_chat", display: "Mini Code" },
+    nemotron3UltraFree: { id: "nemotron-3-ultra-free", protocol: "openai_chat", display: "Nemotron 3" },
   };
 
   const DEFAULT_MODEL = FREE_MODELS.mimoV2_5Free;
-  const FALLBACK_MODEL = FREE_MODELS.deepSeekV4FlashFree;
+  const FALLBACK_MODEL = FREE_MODELS.nemotron3UltraFree;
+  const MODEL_KEYS = Object.keys(FREE_MODELS);
+
+  let selectedModelKey = "mimoV2_5Free";
+  let selectedModel = FREE_MODELS[selectedModelKey];
+
+  function setModel(key) {
+    if (FREE_MODELS[key]) {
+      selectedModelKey = key;
+      selectedModel = FREE_MODELS[key];
+      window.dispatchEvent(new CustomEvent("dx:metasearch-model-change", {
+        detail: { modelKey: key, model: selectedModel },
+      }));
+    }
+  }
+
+  function getModelList() {
+    return MODEL_KEYS.map((key) => ({ key, ...FREE_MODELS[key] }));
+  }
 
   function buildSummaryPrompt(query, results) {
     const snippets = results
@@ -99,7 +116,7 @@
   }
 
   async function trySummarize(query, results, signal) {
-    const models = [DEFAULT_MODEL, FALLBACK_MODEL];
+    const models = [selectedModel, FALLBACK_MODEL];
     let lastError = null;
 
     for (const model of models) {
@@ -119,5 +136,9 @@
     trySummarize,
     FREE_MODELS,
     DEFAULT_MODEL,
+    get selectedModel() { return selectedModel; },
+    get selectedModelKey() { return selectedModelKey; },
+    setModel,
+    getModelList,
   };
 })();

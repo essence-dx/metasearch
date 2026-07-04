@@ -308,7 +308,7 @@
         elements: resultElements,
       });
     } else {
-      resultList.innerHTML = `<div class="results-loader" style="display:flex;justify-content:center;align-items:center;min-height:50vh;width:100%;"><svg aria-hidden="true" class="ui-icon lucide-loader" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="animation: spin 1s linear infinite; width: 36px; height: 36px; color: hsl(var(--muted-foreground));"><path d="M12 2v4"/><path d="m16.2 7.8 2.9-2.9"/><path d="M18 12h4"/><path d="m16.2 16.2 2.9 2.9"/><path d="M12 18v4"/><path d="m4.9 19.1 2.9-2.9"/><path d="M2 12h4"/><path d="m4.9 4.9 2.9 2.9"/></svg></div>
+      resultList.innerHTML = `<div class="results-loader" style="position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);"><svg aria-hidden="true" class="ui-icon lucide-loader" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="animation: spin 1s linear infinite; width: 36px; height: 36px; color: hsl(var(--muted-foreground));"><path d="M12 2v4"/><path d="m16.2 7.8 2.9-2.9"/><path d="M18 12h4"/><path d="m16.2 16.2 2.9 2.9"/><path d="M12 18v4"/><path d="m4.9 19.1 2.9-2.9"/><path d="M2 12h4"/><path d="m4.9 4.9 2.9 2.9"/></svg></div>
       <style>@keyframes spin { 100% { transform: rotate(360deg); } }</style>`;
     }
   }
