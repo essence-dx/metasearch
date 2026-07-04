@@ -22,7 +22,7 @@ export default function HomePage() {
           </span>
         </a>
 
-        <SearchToolbar />
+        {/* <SearchToolbar /> */}
       </header>
 
       <SearchControls />
@@ -47,6 +47,7 @@ export default function HomePage() {
       <script src="/public/metasearch/answer-common.ts" defer></script>
       <script src="/public/metasearch/answer-tts.ts" defer></script>
       <script src="/public/metasearch/answer-controls.ts" defer></script>
+      <script src="/public/metasearch/answer-summary.ts" defer></script>
       <script src="/public/metasearch/answer-evidence.ts" defer></script>
       <script src="/public/metasearch/answer-media.ts" defer></script>
       <script src="/public/metasearch/answer-renderer.ts" defer></script>

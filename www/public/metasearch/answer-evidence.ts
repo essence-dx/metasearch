@@ -187,7 +187,28 @@
     }
 
     const mergedEvidence = mergeTextEvidence([payload, ...payloads], state);
-    if (assistantContent && sourceResults(payload).length === 0 && sourceResults(mergedEvidence).length > 0) {
+    const allResults = sourceResults(mergedEvidence);
+
+    // Try AI summary first using free OpenCode AI models
+    if (assistantContent && allResults.length > 0 && window.DxMetasearchAnswerSummary) {
+      try {
+        const aiText = await window.DxMetasearchAnswerSummary.trySummarize(
+          cleanText(state.query),
+          allResults,
+          signal
+        );
+        if (aiText && !signal?.aborted && answerIsMounted()) {
+          assistantContent.setAttribute("data-source-text", aiText);
+          typeText(assistantContent, aiText);
+          hydrateMediaStage();
+          return;
+        }
+      } catch (_e) {
+        // AI unavailable, fall back to hardcoded answer
+      }
+    }
+
+    if (assistantContent && sourceResults(payload).length === 0 && allResults.length > 0) {
       const answerText = buildAnswerText(mergedEvidence, state);
       assistantContent.setAttribute("data-source-text", answerText);
       if (signal?.aborted || !answerIsMounted()) return;
