@@ -397,6 +397,46 @@
   animation: answer-shimmer 1.8s ease-in-out infinite;
 }
 
+.answer-skeleton {
+  border-radius: 8px;
+  background: linear-gradient(
+    90deg,
+    hsl(var(--surface-strong)) 25%,
+    hsl(var(--surface)) 50%,
+    hsl(var(--surface-strong)) 75%
+  );
+  background-size: 200% 100%;
+  animation: skeleton-pulse 1.5s ease-in-out infinite;
+}
+
+.answer-skeleton--bubble {
+  height: 48px;
+  border-radius: 14px;
+}
+
+.answer-skeleton--user-bubble {
+  height: 44px;
+  width: min(60%, 320px);
+  border-radius: 14px;
+  justify-self: end;
+}
+
+.answer-skeleton--line {
+  height: 14px;
+  border-radius: 6px;
+  margin-bottom: 10px;
+}
+
+.answer-skeleton--card {
+  height: 110px;
+  border-radius: 10px;
+}
+
+@keyframes skeleton-pulse {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
 .answer-actions {
   position: relative;
   z-index: 1;
@@ -1607,6 +1647,7 @@
 
 @media (prefers-reduced-motion: reduce) {
   .answer-shimmer,
+  .answer-skeleton,
   .answer-language-panel,
   .answer-tts-provider-panel,
   .hello-glow-overlay,

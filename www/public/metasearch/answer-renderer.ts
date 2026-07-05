@@ -44,12 +44,31 @@
     elements.resultList.setAttribute("data-result-layout", "answer");
     const shell = createElement("section", "answer-thread answer-thread--pending");
     shell.setAttribute("data-result-card", "true");
-    const user = renderMessage("user", cleanText(state.query), { speaker: true, language: state.language || defaultLanguage });
+
+    const user = createElement("article", "answer-message answer-message--user");
+    const userBubble = createElement("div", "answer-bubble answer-skeleton answer-skeleton--user-bubble");
+    user.append(userBubble);
+
     const assistant = createElement("article", "answer-message answer-message--assistant");
     const bubble = createElement("div", "answer-bubble");
-    bubble.append(createElement("p", "answer-shimmer", "Reading live results"));
+    const lineWidths = ["100%", "92%", "78%", "85%", "55%"];
+    for (const width of lineWidths) {
+      const line = createElement("div", "answer-skeleton answer-skeleton--line");
+      line.style.width = width;
+      bubble.append(line);
+    }
     assistant.append(bubble);
-    shell.append(user.message, assistant);
+
+    const evidence = createElement("section", "answer-evidence");
+    const header = createElement("div", "answer-evidence-header");
+    header.append(createElement("span", "answer-evidence-title", "Sources"));
+    const grid = createElement("div", "answer-evidence-grid");
+    for (let i = 0; i < 4; i++) {
+      grid.append(createElement("div", "answer-skeleton answer-skeleton--card"));
+    }
+    evidence.append(header, grid);
+
+    shell.append(user, assistant, evidence);
     replaceChildren(elements.resultList, [shell]);
   }
 

@@ -208,6 +208,21 @@
       try {
         const payload = await fetchSearchPayload(fetchState, controller.signal);
         if (requestId !== activeRequestId) return;
+        const results = Array.isArray(payload.results) ? payload.results : [];
+        if (state.category !== "answer" && results.length === 0) {
+          const fallbackState = { ...fetchState, category: config.normalizeCategory("general") };
+          try {
+            const fallbackPayload = await fetchSearchPayload(fallbackState, controller.signal);
+            if (requestId !== activeRequestId) return;
+            if (Array.isArray(fallbackPayload.results) && fallbackPayload.results.length > 0) {
+              storeCachedPayload(key, fallbackPayload);
+              config.renderPayload(fallbackPayload, fetchState);
+              config.setStatus("", "ready");
+              queueCategoryPrefetches(fetchState);
+              return;
+            }
+          } catch (_fallbackError) {}
+        }
         storeCachedPayload(key, payload);
         config.renderPayload(payload, fetchState);
         config.setStatus("", "ready");
