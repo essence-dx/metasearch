@@ -103,7 +103,12 @@
           typeText(node, text, () => shell.isConnected && renderId === answerRenderId);
         }
       } else {
-        const html = renderMarkdown ? renderMarkdown(text) : text;
+        const results = Array.isArray(payload.results) ? payload.results : [];
+        const linkMap = {};
+        for (let i = 0; i < results.length && i < 14; i++) {
+          linkMap[String(i + 1)] = results[i].url;
+        }
+        const html = renderMarkdown ? renderMarkdown(text, linkMap) : text;
         node.textContent = "";
         node.setAttribute("data-ai-sourced", "true");
         const inner = document.createElement("div");

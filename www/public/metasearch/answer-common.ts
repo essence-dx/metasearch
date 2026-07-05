@@ -285,7 +285,7 @@
     return text;
   }
 
-  function renderMarkdown(text) {
+  function renderMarkdown(text, linkMap) {
     const codeBlocks = [];
     const htmlEscaped = escapeHtml(text);
     const withPlaceholders = htmlEscaped.replace(/```(\w*)\n?([\s\S]*?)```/g, (_, lang, code) => {
@@ -319,8 +319,31 @@
       const trimmed = line.trim();
       if (!trimmed) { flushList(); flushPara(); continue; }
 
-      const h = trimmed.match(/^(#{1,6})\s+(.+)$/);
+      const h = trimmed.match(/^(#{1,6})\s*(.+)$/);
       if (h) { flushList(); flushPara(); out.push(`<h${h[1].length}>${inlineMarkdown(h[2])}</h${h[1].length}>`); continue; }
+
+      if (trimmed.startsWith("|")) {
+        flushList(); flushPara();
+        const rows = [trimmed];
+        while (i + 1 < lines.length && lines[i + 1].trim().startsWith("|")) {
+          i++;
+          rows.push(lines[i].trim());
+        }
+        const thead = [];
+        const tbody = [];
+        for (let r = 0; r < rows.length; r++) {
+          if (rows[r].match(/^\|[-:| ]+\|?$/)) continue;
+          const cells = rows[r].split("|").slice(1, -1).map((c) => inlineMarkdown(c.trim()));
+          const tag = r === 1 || (r === 0 && rows.length > 1 && rows[1].match(/^\|[-:| ]+\|?$/)) ? "th" : "td";
+          if (tag === "th") thead.push(`<tr>${cells.map((c) => `<th>${c}</th>`).join("")}</tr>`);
+          else tbody.push(`<tr>${cells.map((c) => `<td>${c}</td>`).join("")}</tr>`);
+        }
+        let tbl = "<table>";
+        if (thead.length) tbl += `<thead>${thead.join("")}</thead>`;
+        if (tbody.length) tbl += `<tbody>${tbody.join("")}</tbody>`;
+        out.push(tbl + "</table>");
+        continue;
+      }
 
       const bq = trimmed.match(/^>\s+(.+)$/);
       if (bq) { flushList(); flushPara(); out.push(`<blockquote>${inlineMarkdown(bq[1])}</blockquote>`); continue; }
@@ -352,6 +375,23 @@
 
     let html = out.join("\n");
     html = html.replace(/\x00CB(\d+)\x00/g, (_, i) => codeBlocks[i] || "");
+
+    if (linkMap) {
+      html = html.replace(/\[(\d+(?:\s*,\s*\d+)*)\]/g, (match, nums, offset) => {
+        const prev = offset > 0 ? html[offset - 1] : "";
+        if (prev && !prev.match(/\s|\(|,|>|\[|\]|"|'/)) return match;
+        const ids = nums.split(/\s*,\s*/);
+        const links = ids.map((n) => {
+          const url = linkMap[n];
+          if (!url) return n;
+          const dom = hostname(url);
+          const icon = `https://www.google.com/s2/favicons?domain=${dom}&sz=16`;
+          return `<a href="${url}" target="_blank" rel="noopener" class="citation"><img src="${icon}" alt="" class="citation-favicon" width="14" height="14" loading="lazy" onerror="this.style.display='none'">${n}</a>`;
+        });
+        return "[" + links.join(",") + "]";
+      });
+    }
+
     return html;
   }
 

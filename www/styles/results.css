@@ -292,7 +292,7 @@
   min-width: 0;
   white-space: normal;
 }
-.answer-text :is(p, h1, h2, h3, h4, h5, h6, ul, ol, blockquote, pre, hr) {
+.answer-text :is(p, h1, h2, h3, h4, h5, h6, ul, ol, blockquote, pre, hr, table) {
   margin: 0 0 10px;
 }
 .answer-text :is(h1, h2, h3, h4) {
@@ -338,6 +338,21 @@
   border-top: 1px solid hsl(var(--border));
   height: 0;
 }
+.answer-text table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.88rem;
+}
+.answer-text th, .answer-text td {
+  border: 1px solid hsl(var(--border));
+  padding: 6px 10px;
+  text-align: left;
+  vertical-align: top;
+}
+.answer-text th {
+  background: hsl(var(--muted) / 0.3);
+  font-weight: 600;
+}
 .answer-text a {
   color: hsl(var(--primary));
   text-decoration: underline;
@@ -345,6 +360,23 @@
 }
 .answer-text a:hover {
   opacity: 0.82;
+}
+.answer-text .citation {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  color: hsl(var(--foreground));
+  text-decoration: none;
+  font-weight: 500;
+  font-size: 0.85em;
+  vertical-align: baseline;
+}
+.answer-text .citation:hover {
+  opacity: 0.7;
+}
+.citation-favicon {
+  border-radius: 2px;
+  flex-shrink: 0;
 }
 
 .answer-shimmer {
