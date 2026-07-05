@@ -22,7 +22,7 @@ use crate::state::AppState;
 
 fn cors_layer(settings: &ServerSettings) -> CorsLayer {
     let layer = CorsLayer::new()
-        .allow_methods([Method::GET, Method::HEAD, Method::OPTIONS])
+        .allow_methods([Method::GET, Method::HEAD, Method::POST, Method::OPTIONS])
         .allow_headers([header::ACCEPT, header::CONTENT_TYPE]);
 
     if settings.permissive_cors {

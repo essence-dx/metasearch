@@ -1,4 +1,8 @@
 (() => {
+  const apiOrigin =
+    document.querySelector("[data-metasearch-app]")?.getAttribute("data-api-origin") ||
+    window.location.origin;
+
   // 5 free AI models proxied through the metasearch server
   const FREE_MODELS = {
     bigPickle: { id: "big-pickle", protocol: "openai_chat", display: "Big Pickle" },
@@ -54,7 +58,7 @@
   }
 
   async function callOpenAICompatible(modelId, messages, signal) {
-    const response = await fetch("/api/zen/chat", {
+    const response = await fetch(`${apiOrigin}/api/zen/chat`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -79,7 +83,7 @@
     const systemMsg = messages.find((m) => m.role === "system");
     const userMsgs = messages.filter((m) => m.role !== "system");
 
-    const response = await fetch("/api/zen/chat", {
+    const response = await fetch(`${apiOrigin}/api/zen/chat`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({

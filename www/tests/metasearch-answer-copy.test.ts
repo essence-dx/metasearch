@@ -19,7 +19,7 @@ test("answer copy reads like a source-backed assistant response", () => {
 
 test("answer loading states use polished assistant language", () => {
   expect(answerRendererSource).toContain("Reading live results");
-  expect(answerRendererSource).toContain("Composing the source-backed answer");
+  expect(answerRendererSource).toContain("Generating...");
 });
 
 test("answer evidence labels stay compact and professional", () => {

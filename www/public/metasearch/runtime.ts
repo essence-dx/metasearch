@@ -458,10 +458,7 @@
     scrollFrame = window.requestAnimationFrame(() => {
       scrollFrame = 0;
       if (!controlSearch) return;
-      const header = document.querySelector(".site-header");
-      if (!header) return;
-      const rect = header.getBoundingClientRect();
-      controlSearch.classList.toggle("is-visible", rect.bottom < 0);
+      controlSearch.classList.toggle("is-visible", window.scrollY > 300);
     });
   }
 

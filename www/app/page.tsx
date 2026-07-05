@@ -11,21 +11,24 @@ export default function HomePage() {
     <div
       className="site-shell"
       data-metasearch-app="true"
+      data-api-origin="http://localhost:8888"
       data-flow-tts-endpoint="http://127.0.0.1:8789/api/flow/tts"
     >
-      <header className="site-header">
-        <a className="brand" href="/" aria-label="DX Metasearch">
-          <img className="brand-mark" src="/logo.svg" alt="DX" />
-          <span className="brand-text">
-            <span>DX</span>
-            <strong>Metasearch</strong>
-          </span>
-        </a>
+      <div className="sticky-headers">
+        <header className="site-header">
+          <a className="brand" href="/" aria-label="DX Metasearch">
+            <img className="brand-mark" src="/logo.svg" alt="DX" />
+            <span className="brand-text">
+              <span>DX</span>
+              <strong>Metasearch</strong>
+            </span>
+          </a>
 
-        <SearchToolbar />
-      </header>
+          <SearchToolbar />
+        </header>
 
-      <SearchControls />
+        <SearchControls />
+      </div>
 
       <main className="results-shell" id="results">
         <section className="results-main" aria-label="Search results">

@@ -68,7 +68,7 @@
     const summary = window.DxMetasearchAnswerSummary;
     const initialModel = summary ? "…" : "hardcode";
     const assistant = renderMessage("assistant", "", { assistant: true, latest: true, language, sourceText: hardcodeText, modelName: initialModel });
-    const shimmer = createElement("p", "answer-shimmer", "Composing the source-backed answer");
+    const shimmer = createElement("p", "answer-shimmer", "Generating...");
     assistant.content.replaceWith(shimmer);
     const media = renderMediaStage(payload, state);
     const evidence = renderEvidence(payload);

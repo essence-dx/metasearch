@@ -214,10 +214,13 @@ summary::-webkit-details-marker {
   color: hsl(var(--muted-foreground));
 }
 
-.site-header {
+.sticky-headers {
   position: sticky;
-  z-index: 30;
   top: 0;
+  z-index: 30;
+}
+
+.site-header {
   display: grid;
   grid-template-columns: auto minmax(260px, 1fr);
   align-items: center;
@@ -352,9 +355,6 @@ summary::-webkit-details-marker {
 }
 
 .control-deck {
-  position: sticky;
-  z-index: 30;
-  top: 0;
   display: grid;
   gap: 10px;
   width: 100%;
