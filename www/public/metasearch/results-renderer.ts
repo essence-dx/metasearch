@@ -132,8 +132,24 @@
       return;
     }
     disposeCurrentMedia(elements);
-    replaceChildren(elements.resultList, visibleResults.map((result, index) => renderResult(result, index, state.category)));
-    scheduleResultCardSpans(elements.resultList);
+    const cards = visibleResults.map((result, index) => renderResult(result, index, state.category));
+    const list = elements.resultList;
+    list.textContent = "";
+    const initialBatch = 12;
+    list.append(...cards.slice(0, initialBatch));
+    if (cards.length > initialBatch) {
+      let pos = initialBatch;
+      function nextChunk() {
+        const chunk = cards.slice(pos, pos + 8);
+        if (!chunk.length) { scheduleResultCardSpans(list); return; }
+        pos += chunk.length;
+        list.append(...chunk);
+        requestAnimationFrame(pos < cards.length ? nextChunk : () => scheduleResultCardSpans(list));
+      }
+      requestAnimationFrame(nextChunk);
+    } else {
+      scheduleResultCardSpans(list);
+    }
   }
 
   window.addEventListener("resize", () => {
