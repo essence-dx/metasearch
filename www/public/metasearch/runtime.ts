@@ -457,6 +457,7 @@
     if (scrollFrame) return;
     scrollFrame = window.requestAnimationFrame(() => {
       scrollFrame = 0;
+      document.body.classList.toggle("scroll-hide", window.scrollY > 100);
       if (!controlSearch) return;
       controlSearch.classList.toggle("is-visible", window.scrollY > 300);
     });

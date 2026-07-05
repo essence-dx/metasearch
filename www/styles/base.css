@@ -228,6 +228,16 @@ summary::-webkit-details-marker {
   background: hsl(var(--background) / 0.94);
   padding: 12px clamp(14px, 3vw, 32px);
   backdrop-filter: blur(18px);
+  transition: max-height 0.4s ease, padding 0.4s ease, opacity 0.25s ease;
+  max-height: 200px;
+  overflow: hidden;
+}
+
+.scroll-hide .site-header {
+  max-height: 0;
+  padding-top: 0;
+  padding-bottom: 0;
+  opacity: 0;
 }
 
 .brand {
