@@ -6,5 +6,6 @@ project (
 
 companion (
   binary    = "dx-metasearch"
+  cwd       = ..
   ready_url = "http://127.0.0.1:8888/api/search?q=ping"
 )
