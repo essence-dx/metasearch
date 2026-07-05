@@ -4,13 +4,6 @@ project (
   kind    = www
 )
 
-dev (
-  host       = 127.0.0.1
-  port       = 3000
-  hot-reload = true
-  devtools   = false
-)
-
 companion (
   binary    = "dx-metasearch"
   ready_url = "http://127.0.0.1:8888/api/search?q=ping"
