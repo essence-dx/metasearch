@@ -326,12 +326,27 @@
     showPendingState,
   });
 
+  const searchHistory = [];
+  const MAX_HISTORY = 20;
+
+  function addToHistory(query) {
+    const q = (query || "").trim();
+    if (!q) return;
+    const idx = searchHistory.indexOf(q);
+    if (idx === 0) return;
+    if (idx > 0) searchHistory.splice(idx, 1);
+    searchHistory.unshift(q);
+    if (searchHistory.length > MAX_HISTORY) searchHistory.length = MAX_HISTORY;
+  }
+
   function runSearch(state, updateUrl) {
     if (!resultsRenderer || !searchScheduler) {
       setStatus("Search renderer unavailable", "error");
       return;
     }
+    addToHistory(state.query);
     searchScheduler.runSearch(state, updateUrl);
+    syncControlSearch();
   }
 
   function queuePrefetchState(state, category, priority) {
@@ -402,9 +417,61 @@
     runAnswerPrompt(data);
   });
 
+  // --- Control-deck searchbar ---
+  let controlSearch = null;
+  let controlSearchInput = null;
+  let scrollFrame = 0;
+
+  function setupControlSearch() {
+    const controlActions = document.querySelector("[data-category-controls]");
+    if (!controlActions || controlActions.querySelector("[data-control-search]")) return;
+    const wrap = document.createElement("div");
+    wrap.className = "control-search";
+    wrap.setAttribute("data-control-search", "true");
+    wrap.innerHTML = `
+      <input type="search" class="control-search-input" placeholder="Search the web" data-control-search-input="true" />
+    `;
+    controlActions.prepend(wrap);
+    controlSearch = wrap;
+    controlSearchInput = wrap.querySelector("input");
+    controlSearchInput.addEventListener("keydown", (e) => {
+      if (e.key !== "Enter") return;
+      e.preventDefault();
+      const val = controlSearchInput.value.trim();
+      if (!val) return;
+      if (queryInput) queryInput.value = val;
+      runSearch(readFormState(), true);
+      controlSearchInput.blur();
+    });
+    controlSearchInput.addEventListener("input", () => {
+      if (queryInput) queryInput.value = controlSearchInput.value;
+    });
+  }
+
+  function syncControlSearch() {
+    if (!controlSearchInput || !queryInput) return;
+    controlSearchInput.value = queryInput.value;
+  }
+
+  function handleScroll() {
+    if (scrollFrame) return;
+    scrollFrame = window.requestAnimationFrame(() => {
+      scrollFrame = 0;
+      if (!controlSearch) return;
+      const header = document.querySelector(".site-header");
+      if (!header) return;
+      const rect = header.getBoundingClientRect();
+      controlSearch.classList.toggle("is-visible", rect.bottom < 0);
+    });
+  }
+
+  setupControlSearch();
+  window.addEventListener("scroll", handleScroll, { passive: true });
+
   window.DxMetasearch = Object.assign(window.DxMetasearch || {}, {
     answer: runAnswerPrompt,
     answerPromptSchema: "dx.metasearch.answer.prompt.v1",
+    searchHistory,
   });
 
   if (categoryTabShell) {

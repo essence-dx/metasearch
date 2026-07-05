@@ -35,6 +35,12 @@
       .map((r, i) => `${i + 1}. [${r.title || "Untitled"}](${r.url || ""}) - ${(r.content || "").slice(0, 500)}`)
       .join("\n");
 
+    const history = window.DxMetasearch?.searchHistory || [];
+    const prevQueries = history.filter((q) => q !== query).slice(0, 5);
+    const historyBlock = prevQueries.length
+      ? `\n\nPrevious searches this session: ${prevQueries.join(" → ")}`
+      : "";
+
     return [
       {
         role: "system",
@@ -42,7 +48,7 @@
       },
       {
         role: "user",
-        content: `Query: ${query}\n\nLive search results:\n${snippets}\n\nProvide a concise answer summarizing the key information from these results.`,
+        content: `Query: ${query}${historyBlock}\n\nLive search results:\n${snippets}\n\nProvide a concise answer summarizing the key information from these results.`,
       },
     ];
   }

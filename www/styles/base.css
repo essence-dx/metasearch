@@ -222,7 +222,6 @@ summary::-webkit-details-marker {
   grid-template-columns: auto minmax(260px, 1fr);
   align-items: center;
   gap: 20px;
-  border-bottom: 1px solid hsl(var(--border));
   background: hsl(var(--background) / 0.94);
   padding: 12px clamp(14px, 3vw, 32px);
   backdrop-filter: blur(18px);
@@ -767,4 +766,43 @@ summary::-webkit-details-marker {
   :where(.site-shell button, .site-shell summary, .site-shell a, .result-card, .image-card, .video-card, .news-card, .music-card) {
     transform: none !important;
   }
+}
+
+.control-search {
+  display: flex;
+  align-items: center;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.25s ease, margin 0.25s ease;
+  margin-right: 0;
+  max-width: 0;
+  overflow: hidden;
+}
+
+.control-search.is-visible {
+  opacity: 1;
+  pointer-events: auto;
+  margin-right: 8px;
+  max-width: 200px;
+}
+
+.control-search-input {
+  width: 180px;
+  border: 1px solid hsl(var(--border));
+  border-radius: 6px;
+  outline: none;
+  background: hsl(var(--muted) / 0.5);
+  padding: 5px 10px;
+  font: inherit;
+  font-size: 0.82rem;
+  color: hsl(var(--foreground));
+  transition: border-color 0.15s;
+}
+
+.control-search-input:focus {
+  border-color: hsl(var(--ring));
+}
+
+.control-search-input::placeholder {
+  color: hsl(var(--muted-foreground));
 }
