@@ -5,7 +5,7 @@ www(
    output_dir=.dx/www/output
 )
 
-dev(host=127.0.0.1 port=3001 hot_reload=true devtools=true)
+dev(host=127.0.0.1 port=3001 hot_reload=true devtools=false)
 
 style(
    mode=generated-css
