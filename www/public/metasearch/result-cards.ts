@@ -1,10 +1,8 @@
 (() => {
   const common = window.DxMetasearchResultCommon;
   const {
-    categoryLabels,
     compactUrl,
     createElement,
-    formatScore,
     hostname,
     metadataEntries,
     renderSnippet,
@@ -13,10 +11,6 @@
 
   function resultMeta(result) {
     const items = [
-      result.engine,
-      categoryLabels[result.category] || result.category,
-      result.engine_rank ? `rank ${result.engine_rank}` : "",
-      Number.isFinite(Number(result.score)) ? `score ${formatScore(result.score)}` : "",
       result.published_date,
       hostname(result.url),
     ].filter(Boolean);

@@ -1550,9 +1550,8 @@
 }
 
 .result-card:has(.result-media) {
-  grid-template-columns: minmax(112px, 148px) minmax(0, 1fr);
+  grid-template-columns: 1fr;
   gap: 0;
-  align-items: stretch;
   overflow: hidden;
   padding: 0;
 }
@@ -1566,11 +1565,10 @@
 .result-media {
   position: relative;
   display: block;
-  align-self: stretch;
-  min-height: 100%;
   overflow: hidden;
-  border-right: 1px solid hsl(var(--border));
-  aspect-ratio: auto;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  border-bottom: 1px solid hsl(var(--border));
   background: hsl(var(--surface-strong));
 }
 
@@ -1618,6 +1616,9 @@
   color: hsl(var(--muted-foreground));
   font-size: 0.78rem;
   font-weight: 720;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .source-row span:not(:last-child)::after {
@@ -1805,7 +1806,7 @@
 }
 
 .news-card {
-  grid-template-columns: minmax(120px, 160px) minmax(0, 1fr);
+  grid-template-columns: 1fr;
 }
 
 .video-card:hover,
@@ -1858,7 +1859,8 @@
 }
 
 .news-thumb {
-  aspect-ratio: 4 / 3;
+  aspect-ratio: 16 / 9;
+  width: 100%;
 }
 
 .music-art {
@@ -2007,7 +2009,9 @@
   font-family: var(--font-mono);
   font-size: 0.78rem;
   line-height: 1.5;
-  overflow-wrap: anywhere;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .details-list {
