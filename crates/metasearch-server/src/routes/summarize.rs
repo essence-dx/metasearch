@@ -13,7 +13,7 @@ use crate::state::AppState;
 const ZEN_CHAT_URL: &str = "https://opencode.ai/zen/v1/chat/completions";
 
 pub fn routes() -> Router<Arc<AppState>> {
-    Router::new().route("/api/zen/chat", post(proxy_zen_chat))
+    Router::new().route("/api/ai/summarize", post(proxy_zen_chat))
 }
 
 async fn proxy_zen_chat(

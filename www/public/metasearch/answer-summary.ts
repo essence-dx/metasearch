@@ -58,7 +58,7 @@
   }
 
   async function callOpenAICompatible(modelId, messages, signal) {
-    const response = await fetch(`${apiOrigin}/api/zen/chat`, {
+    const response = await fetch(`${apiOrigin}/api/ai/summarize`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -83,7 +83,7 @@
     const systemMsg = messages.find((m) => m.role === "system");
     const userMsgs = messages.filter((m) => m.role !== "system");
 
-    const response = await fetch(`${apiOrigin}/api/zen/chat`, {
+    const response = await fetch(`${apiOrigin}/api/ai/summarize`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({

@@ -54,7 +54,7 @@ pub fn build_router(state: Arc<AppState>) -> Router {
         .merge(routes::api_routes())
         .merge(routes::autocomplete_routes())
         .merge(routes::opensearch_routes())
-        .merge(routes::zen_routes())
+        .merge(routes::summarize_routes())
         .merge(routes::static_routes(&static_dir))
         .merge(routes::health_routes())
         .layer(
