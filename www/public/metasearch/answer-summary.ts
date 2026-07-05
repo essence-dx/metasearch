@@ -48,25 +48,23 @@
     return [
       {
         role: "system",
-        content: "You are a helpful search result summarizer. Answer the user's query based on the provided live search results. Be concise, factual, and cite sources by number. If the results don't contain enough information, say so.",
+        content: "You are a professional research assistant. Write a comprehensive, well-structured answer to the user's query using the live search results provided. Use markdown formatting: headings for sections, **bold** for key terms, bullet points for lists, and cite sources by number in brackets like [1]. Write at least 3-4 paragraphs covering the most important aspects. If the results are insufficient, say so clearly.",
       },
       {
         role: "user",
-        content: `Query: ${query}${historyBlock}\n\nLive search results:\n${snippets}\n\nProvide a concise answer summarizing the key information from these results.`,
+        content: `Query: ${query}${historyBlock}\n\nLive search results:\n${snippets}\n\nWrite a thorough, professional answer based on these results. Include key facts, multiple perspectives where applicable, and cite sources.`,
       },
     ];
   }
 
   async function callOpenAICompatible(modelId, messages, signal) {
-    const url = `${apiOrigin}/api/ai/summarize`;
-    console.log("[DX AI] fetching", url, "model:", modelId);
-    const response = await fetch(url, {
+    const response = await fetch(`${apiOrigin}/api/ai/summarize`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         model: modelId,
         messages,
-        max_tokens: 1024,
+        max_tokens: 2048,
         temperature: 0.3,
       }),
       signal,
@@ -74,14 +72,11 @@
 
     if (!response.ok) {
       const text = await response.text().catch(() => "");
-      console.error("[DX AI] HTTP", response.status, text);
       throw new Error(`API error ${response.status}: ${text}`);
     }
 
     const data = await response.json();
-    const content = data.choices?.[0]?.message?.content || "";
-    console.log("[DX AI] got content length:", content.length);
-    return content;
+    return data.choices?.[0]?.message?.content || "";
   }
 
   async function callAnthropicCompatible(modelId, messages, signal) {
@@ -95,7 +90,7 @@
         model: modelId,
         system: systemMsg?.content || "",
         messages: userMsgs,
-        max_tokens: 1024,
+        max_tokens: 2048,
         temperature: 0.3,
       }),
       signal,
@@ -126,17 +121,13 @@
     for (const model of models) {
       if (signal?.aborted) return null;
       try {
-        console.log("[DX AI] trying model:", model.id);
         const text = await summarizeWithModel(query, results, model, signal);
-        console.log("[DX AI] model result:", model.id, text ? "success" : "empty");
         if (text) return text;
       } catch (err) {
-        console.warn("[DX AI] model failed:", model.id, err);
         lastError = err;
       }
     }
 
-    console.warn("[DX AI] all models failed, last error:", lastError);
     return null;
   }
 

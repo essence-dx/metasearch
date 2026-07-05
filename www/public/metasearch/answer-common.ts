@@ -271,8 +271,93 @@
     return "The AI summary is still loading. If this keeps happening, check the model or the proxy endpoint.";
   }
 
+  function escapeHtml(s) {
+    return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+  }
+
+  function inlineMarkdown(text) {
+    text = text.replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>");
+    text = text.replace(/__([^_]+)__/g, "<strong>$1</strong>");
+    text = text.replace(/\*([^*]+)\*/g, "<em>$1</em>");
+    text = text.replace(/_([^_]+)_/g, "<em>$1</em>");
+    text = text.replace(/`([^`]+)`/g, "<code>$1</code>");
+    text = text.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank" rel="noopener">$1</a>');
+    return text;
+  }
+
+  function renderMarkdown(text) {
+    const codeBlocks = [];
+    const htmlEscaped = escapeHtml(text);
+    const withPlaceholders = htmlEscaped.replace(/```(\w*)\n?([\s\S]*?)```/g, (_, lang, code) => {
+      codeBlocks.push(`<pre><code>${code}</code></pre>`);
+      return `\x00CB${codeBlocks.length - 1}\x00`;
+    });
+
+    const lines = withPlaceholders.split("\n");
+    const out = [];
+    let inList = null;
+    let listItems = [];
+    let paraLines = [];
+
+    function flushList() {
+      if (inList && listItems.length) {
+        out.push(`<${inList}>${listItems.join("")}</${inList}>`);
+      }
+      listItems = [];
+      inList = null;
+    }
+
+    function flushPara() {
+      if (paraLines.length) {
+        out.push(`<p>${inlineMarkdown(paraLines.join("<br>"))}</p>`);
+        paraLines = [];
+      }
+    }
+
+    for (let i = 0; i < lines.length; i++) {
+      const line = lines[i];
+      const trimmed = line.trim();
+      if (!trimmed) { flushList(); flushPara(); continue; }
+
+      const h = trimmed.match(/^(#{1,6})\s+(.+)$/);
+      if (h) { flushList(); flushPara(); out.push(`<h${h[1].length}>${inlineMarkdown(h[2])}</h${h[1].length}>`); continue; }
+
+      const bq = trimmed.match(/^>\s+(.+)$/);
+      if (bq) { flushList(); flushPara(); out.push(`<blockquote>${inlineMarkdown(bq[1])}</blockquote>`); continue; }
+
+      const ul = trimmed.match(/^[-*]\s+(.+)$/);
+      if (ul) {
+        flushPara();
+        if (inList !== "ul") { flushList(); inList = "ul"; }
+        listItems.push(`<li>${inlineMarkdown(ul[1])}</li>`);
+        continue;
+      }
+
+      const ol = trimmed.match(/^\d+[.)]\s+(.+)$/);
+      if (ol) {
+        flushPara();
+        if (inList !== "ol") { flushList(); inList = "ol"; }
+        listItems.push(`<li>${inlineMarkdown(ol[1])}</li>`);
+        continue;
+      }
+
+      if (trimmed.match(/^-{3,}$/)) { flushList(); flushPara(); out.push("<hr>"); continue; }
+
+      flushList();
+      paraLines.push(trimmed);
+    }
+
+    flushList();
+    flushPara();
+
+    let html = out.join("\n");
+    html = html.replace(/\x00CB(\d+)\x00/g, (_, i) => codeBlocks[i] || "");
+    return html;
+  }
+
   window.DxMetasearchAnswerCommon = {
     buildAnswerText,
+    renderMarkdown,
     categoryLabel,
     attachHelloGlow,
     cleanText,

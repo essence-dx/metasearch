@@ -288,6 +288,65 @@
   opacity: 0.68;
 }
 
+.answer-text > div {
+  min-width: 0;
+  white-space: normal;
+}
+.answer-text :is(p, h1, h2, h3, h4, h5, h6, ul, ol, blockquote, pre, hr) {
+  margin: 0 0 10px;
+}
+.answer-text :is(h1, h2, h3, h4) {
+  color: hsl(var(--foreground));
+  font-weight: 600;
+  line-height: 1.35;
+}
+.answer-text h1 { font-size: 1.15rem; }
+.answer-text h2 { font-size: 1.08rem; }
+.answer-text h3 { font-size: 1.02rem; }
+.answer-text ul, .answer-text ol { padding-left: 22px; }
+.answer-text li { margin-bottom: 4px; }
+.answer-text blockquote {
+  border-left: 3px solid hsl(var(--border));
+  padding: 6px 14px;
+  color: hsl(var(--muted-foreground));
+  font-style: italic;
+}
+.answer-text pre {
+  background: hsl(var(--muted) / 0.5);
+  border: 1px solid hsl(var(--border));
+  border-radius: 8px;
+  padding: 12px;
+  overflow-x: auto;
+  font-size: 0.82rem;
+  line-height: 1.5;
+}
+.answer-text code {
+  background: hsl(var(--muted) / 0.5);
+  border-radius: 4px;
+  padding: 1px 5px;
+  font-size: 0.85em;
+  font-family: ui-monospace, monospace;
+}
+.answer-text pre code {
+  background: none;
+  border-radius: 0;
+  padding: 0;
+  font-size: inherit;
+}
+.answer-text hr {
+  border: none;
+  border-top: 1px solid hsl(var(--border));
+  height: 0;
+}
+.answer-text a {
+  color: hsl(var(--primary));
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+.answer-text a:hover {
+  opacity: 0.82;
+}
+
 .answer-shimmer {
   width: fit-content;
   max-width: 100%;

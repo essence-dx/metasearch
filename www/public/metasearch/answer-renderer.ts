@@ -7,6 +7,7 @@
     cleanText,
     createElement,
     defaultLanguage,
+    renderMarkdown,
     replaceChildren,
   } = common;
   const { renderMessage } = controls;
@@ -94,11 +95,20 @@
       }
       if (shimmer.isConnected) shimmer.replaceWith(node);
       node.setAttribute("data-answer-hydrated", "true");
-      if (payload._hasAnimated) {
-        node.textContent = text;
+      if (isHardcode) {
+        if (payload._hasAnimated) {
+          node.textContent = text;
+        } else {
+          payload._hasAnimated = true;
+          typeText(node, text, () => shell.isConnected && renderId === answerRenderId);
+        }
       } else {
-        payload._hasAnimated = true;
-        typeText(node, text, () => shell.isConnected && renderId === answerRenderId);
+        const html = renderMarkdown ? renderMarkdown(text) : text;
+        node.textContent = "";
+        node.setAttribute("data-ai-sourced", "true");
+        const inner = document.createElement("div");
+        inner.innerHTML = html;
+        node.appendChild(inner);
       }
     }
 
@@ -106,14 +116,12 @@
       .finally(() => {
         if (activeEvidenceController === evidenceController) activeEvidenceController = null;
         if (!answerPopulated && shell.isConnected && renderId === answerRenderId) {
-          console.warn("[DX AI] hydrateAnswerEvidence finished without populateAnswer, fallback");
           populateAnswer(assistant.content, hardcodeText);
         }
       });
 
     window.setTimeout(() => {
       if (!answerPopulated && shell.isConnected && renderId === answerRenderId) {
-        console.warn("[DX AI] 12s timeout fired, falling back to hardcode");
         populateAnswer(assistant.content, hardcodeText);
       }
     }, 30000);

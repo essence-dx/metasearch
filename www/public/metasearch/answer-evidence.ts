@@ -191,7 +191,6 @@
 
     // Try AI summary first using free OpenCode AI models
     if (assistantContent && allResults.length > 0 && window.DxMetasearchAnswerSummary) {
-      console.log("[DX AI] attempting AI summary for:", cleanText(state.query), "results:", allResults.length);
       try {
         const aiText = await window.DxMetasearchAnswerSummary.trySummarize(
           cleanText(state.query),
@@ -199,19 +198,15 @@
           signal
         );
         if (aiText && !signal?.aborted && answerIsMounted()) {
-          console.log("[DX AI] success, text length:", aiText.length);
           assistantContent.setAttribute("data-ai-sourced", "true");
           assistantContent.setAttribute("data-source-text", aiText);
           typeText(assistantContent, aiText);
           hydrateMediaStage();
           return;
         }
-        console.warn("[DX AI] returned null/empty", { aiText, aborted: signal?.aborted, mounted: answerIsMounted() });
-      } catch (e) {
-        console.warn("[DX AI] error:", e);
+      } catch (_e) {
+        // AI unavailable, fall back to hardcoded answer
       }
-    } else {
-      console.log("[DX AI] skipped:", { hasAssistant: !!assistantContent, resultCount: allResults.length, hasSummary: !!window.DxMetasearchAnswerSummary });
     }
 
     if (assistantContent && allResults.length > 0) {
