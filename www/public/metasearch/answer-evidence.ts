@@ -190,7 +190,7 @@
     const allResults = sourceResults(mergedEvidence);
 
     // Try AI summary first using free OpenCode AI models
-    if (assistantContent && allResults.length > 0 && window.DxMetasearchAnswerSummary) {
+    if (false && assistantContent && allResults.length > 0 && window.DxMetasearchAnswerSummary) {
       try {
         const aiText = await window.DxMetasearchAnswerSummary.trySummarize(
           cleanText(state.query),

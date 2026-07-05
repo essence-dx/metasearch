@@ -53,7 +53,7 @@
       );
       if (options.modelName) {
         if (window.DxMetasearchAnswerSummary) {
-          actions.append(modelPicker());
+          // actions.append(modelPicker());
         } else {
           const badge = createElement("span", "answer-model-badge", options.modelName);
           badge.classList.add("answer-model-badge--hardcode");

@@ -88,7 +88,13 @@
     const summary = window.DxMetasearchAnswerSummary;
     const initialModel = summary ? "…" : "hardcode";
     const assistant = renderMessage("assistant", "", { assistant: true, latest: true, language, sourceText: hardcodeText, modelName: initialModel });
-    const shimmer = createElement("p", "answer-shimmer", "Generating...");
+    const shimmer = createElement("div", "answer-skeleton-container");
+    const lineWidths = ["100%", "92%", "78%", "85%", "55%"];
+    for (const width of lineWidths) {
+      const line = createElement("div", "answer-skeleton answer-skeleton--line");
+      line.style.width = width;
+      shimmer.append(line);
+    }
     assistant.content.replaceWith(shimmer);
     const media = renderMediaStage(payload, state);
     const evidence = renderEvidence(payload);
@@ -114,26 +120,17 @@
       }
       if (shimmer.isConnected) shimmer.replaceWith(node);
       node.setAttribute("data-answer-hydrated", "true");
-      if (isHardcode) {
-        if (payload._hasAnimated) {
-          node.textContent = text;
-        } else {
-          payload._hasAnimated = true;
-          typeText(node, text, () => shell.isConnected && renderId === answerRenderId);
-        }
-      } else {
-        const results = Array.isArray(payload.results) ? payload.results : [];
-        const linkMap = {};
-        for (let i = 0; i < results.length && i < 14; i++) {
-          linkMap[String(i + 1)] = results[i].url;
-        }
-        const html = renderMarkdown ? renderMarkdown(text, linkMap) : text;
-        node.textContent = "";
-        node.setAttribute("data-ai-sourced", "true");
-        const inner = document.createElement("div");
-        inner.innerHTML = html;
-        node.appendChild(inner);
+      const results = Array.isArray(payload.results) ? payload.results : [];
+      const linkMap = {};
+      for (let i = 0; i < results.length && i < 14; i++) {
+        linkMap[String(i + 1)] = results[i].url;
       }
+      const html = renderMarkdown ? renderMarkdown(text, linkMap) : text;
+      node.textContent = "";
+      node.setAttribute("data-ai-sourced", isHardcode ? "false" : "true");
+      const inner = document.createElement("div");
+      inner.innerHTML = html;
+      node.appendChild(inner);
     }
 
     hydrateAnswerEvidence(shell, evidence.section, evidence, payload, state, apiOrigin, assistant.content, evidenceController.signal, populateAnswer)
