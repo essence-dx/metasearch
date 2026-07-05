@@ -1,8 +1,5 @@
 (() => {
-  const API_URL = "https://opencode.ai/zen";
-  const API_KEY = "public";
-
-  // 5 free AI models from OpenCode Zen (https://opencode.ai/zen)
+  // 5 free AI models proxied through the metasearch server
   const FREE_MODELS = {
     bigPickle: { id: "big-pickle", protocol: "openai_chat", display: "Big Pickle" },
     deepSeekV4FlashFree: { id: "deepseek-v4-flash-free", protocol: "openai_chat", display: "Flash Free" },
@@ -50,13 +47,10 @@
     ];
   }
 
-  async function callOpenAICompatible(url, modelId, messages, signal) {
-    const response = await fetch(`${url}/v1/chat/completions`, {
+  async function callOpenAICompatible(modelId, messages, signal) {
+    const response = await fetch("/api/zen/chat", {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${API_KEY}`,
-      },
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         model: modelId,
         messages,
@@ -75,17 +69,13 @@
     return data.choices?.[0]?.message?.content || "";
   }
 
-  async function callAnthropicCompatible(url, modelId, messages, signal) {
+  async function callAnthropicCompatible(modelId, messages, signal) {
     const systemMsg = messages.find((m) => m.role === "system");
     const userMsgs = messages.filter((m) => m.role !== "system");
 
-    const response = await fetch(`${url}/v1/messages`, {
+    const response = await fetch("/api/zen/chat", {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "x-api-key": API_KEY,
-        "anthropic-version": "2023-06-01",
-      },
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         model: modelId,
         system: systemMsg?.content || "",
@@ -107,12 +97,11 @@
 
   async function summarizeWithModel(query, results, model, signal) {
     const messages = buildSummaryPrompt(query, results);
-    const url = API_URL;
 
     if (model.protocol === "anthropic") {
-      return callAnthropicCompatible(url, model.id, messages, signal);
+      return callAnthropicCompatible(model.id, messages, signal);
     }
-    return callOpenAICompatible(url, model.id, messages, signal);
+    return callOpenAICompatible(model.id, messages, signal);
   }
 
   async function trySummarize(query, results, signal) {

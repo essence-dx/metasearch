@@ -200,6 +200,11 @@
   padding: 4px 0 28px;
 }
 
+.answer-thread--composing .answer-media-stage,
+.answer-thread--composing .answer-evidence {
+  display: none;
+}
+
 .answer-message {
   position: relative;
   display: grid;

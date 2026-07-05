@@ -87,7 +87,6 @@
       createElement("span", "image-card-source", result.engine || hostname(result.url)),
     );
     card.append(overlay);
-    attachCardGlow(card);
     return card;
   }
 
@@ -104,7 +103,6 @@
     const titleText = result.title || result.url;
     content.append(titleWithHovercard(externalLink("video-title", result, titleText), titleText), meta, renderSnippet(result, category, "video-desc"));
     article.append(media, content);
-    attachCardGlow(article);
     return article;
   }
 
@@ -121,7 +119,6 @@
     const titleText = result.title || result.url;
     content.append(meta, titleWithHovercard(externalLink("news-title", result, titleText), titleText), renderSnippet(result, category, "news-snippet"));
     article.append(content);
-    attachCardGlow(article);
     return article;
   }
 
@@ -135,13 +132,7 @@
     const titleText = result.title || result.url;
     content.append(titleWithHovercard(externalLink("music-title", result, titleText), titleText), renderSnippet(result, category, "music-desc"), meta);
     article.append(art, content);
-    attachCardGlow(article);
     return article;
-  }
-
-  function attachCardGlow(node) {
-    const glow = window.DxMetasearchAnswerCommon?.attachHelloGlow;
-    if (typeof glow === "function") glow(node);
   }
 
   function renderStandardResult(result, index, category) {
@@ -166,7 +157,6 @@
       article.append(media);
     }
     article.append(content);
-    attachCardGlow(article);
     return article;
   }
 

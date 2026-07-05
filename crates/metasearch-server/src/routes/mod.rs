@@ -7,6 +7,7 @@ pub mod opensearch;
 pub mod pages;
 pub mod robots;
 pub mod search;
+pub mod zen;
 
 use crate::state::AppState;
 use axum::Router;
@@ -38,4 +39,8 @@ pub fn health_routes() -> Router<Arc<AppState>> {
 
 pub fn opensearch_routes() -> Router<Arc<AppState>> {
     opensearch::routes()
+}
+
+pub fn zen_routes() -> Router<Arc<AppState>> {
+    zen::routes()
 }

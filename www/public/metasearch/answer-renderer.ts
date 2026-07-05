@@ -60,7 +60,7 @@
     activeEvidenceController = evidenceController;
     const language = state.language || defaultLanguage;
     const hardcodeText = buildAnswerText(payload, state);
-    const shell = createElement("section", "answer-thread");
+    const shell = createElement("section", "answer-thread answer-thread--composing");
     shell.setAttribute("data-result-card", "true");
 
     const user = renderMessage("user", cleanText(state.query || payload.query), { speaker: true, language });
@@ -84,6 +84,7 @@
     function populateAnswer(node, text) {
       if (!shell.isConnected || renderId !== answerRenderId || answerPopulated) return;
       answerPopulated = true;
+      shell.classList.remove("answer-thread--composing");
       const isHardcode = node.getAttribute("data-ai-sourced") !== "true";
       const modelName = isHardcode ? "hardcode" : (summary?.selectedModel?.display || summary?.DEFAULT_MODEL?.display || "AI");
       const badge = assistant.message.querySelector("[data-answer-model-badge]");
