@@ -746,7 +746,6 @@
       imageGallery ? null : renderImagePlayer(payload, featuredImage),
       imageGallery,
       videoGallery,
-      renderAudioPlayer(payload, state),
     ].filter(Boolean);
     if (!panels.length) return null;
     for (const panel of panels) {
