@@ -106,15 +106,17 @@
       .finally(() => {
         if (activeEvidenceController === evidenceController) activeEvidenceController = null;
         if (!answerPopulated && shell.isConnected && renderId === answerRenderId) {
+          console.warn("[DX AI] hydrateAnswerEvidence finished without populateAnswer, fallback");
           populateAnswer(assistant.content, hardcodeText);
         }
       });
 
     window.setTimeout(() => {
       if (!answerPopulated && shell.isConnected && renderId === answerRenderId) {
+        console.warn("[DX AI] 12s timeout fired, falling back to hardcode");
         populateAnswer(assistant.content, hardcodeText);
       }
-    }, 12000);
+    }, 30000);
   }
 
   function typeText(node, text, shouldContinue = () => true) {

@@ -58,7 +58,9 @@
   }
 
   async function callOpenAICompatible(modelId, messages, signal) {
-    const response = await fetch(`${apiOrigin}/api/ai/summarize`, {
+    const url = `${apiOrigin}/api/ai/summarize`;
+    console.log("[DX AI] fetching", url, "model:", modelId);
+    const response = await fetch(url, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -72,11 +74,14 @@
 
     if (!response.ok) {
       const text = await response.text().catch(() => "");
+      console.error("[DX AI] HTTP", response.status, text);
       throw new Error(`API error ${response.status}: ${text}`);
     }
 
     const data = await response.json();
-    return data.choices?.[0]?.message?.content || "";
+    const content = data.choices?.[0]?.message?.content || "";
+    console.log("[DX AI] got content length:", content.length);
+    return content;
   }
 
   async function callAnthropicCompatible(modelId, messages, signal) {
@@ -121,13 +126,17 @@
     for (const model of models) {
       if (signal?.aborted) return null;
       try {
+        console.log("[DX AI] trying model:", model.id);
         const text = await summarizeWithModel(query, results, model, signal);
+        console.log("[DX AI] model result:", model.id, text ? "success" : "empty");
         if (text) return text;
       } catch (err) {
+        console.warn("[DX AI] model failed:", model.id, err);
         lastError = err;
       }
     }
 
+    console.warn("[DX AI] all models failed, last error:", lastError);
     return null;
   }
 

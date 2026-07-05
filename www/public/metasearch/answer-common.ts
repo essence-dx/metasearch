@@ -268,44 +268,7 @@
   }
 
   function buildAnswerText(payload, state) {
-    const query = cleanText(payload.query || state.query);
-    const results = sourceResults(payload);
-    if (results.length === 0) {
-      return query
-        ? `I’m still looking for enough reliable live results on "${query}". Try a broader query or switch to another result tab.`
-        : "I’m still looking for enough reliable live results. Try a broader query or switch to another result tab.";
-    }
-
-    const topResults = results.slice(0, primaryEvidenceLimit);
-    const resultCount = resultCountLabel(payload, results);
-    const engineCount = engineCountLabel(payload, results);
-    const scope = [resultCount, engineCount].filter(Boolean).join(" across ");
-    const intro = query
-      ? `Here are the search results for "${query}".`
-      : "Here are the search results.";
-    const context = scope
-      ? `I scanned ${scope} and pulled out the highest-signal links first.`
-      : "I pulled out the highest-signal links first.";
-    const bullets = topResults.map((result, index) => {
-      const title = truncate(result.title || result.url, 92);
-      const snippet = truncate(result.content || compactUrl(result.url), 190);
-      const signal = resultSignal(result, state.category);
-      return `${resultLead(index)}${signal ? ` (${signal})` : ""}: ${title}. ${snippet}`;
-    });
-    const sources = results
-      .map(resultSource)
-      .filter(Boolean)
-      .slice(0, 4)
-      .join(", ");
-
-    return [
-      intro,
-      context,
-      ...bullets,
-      sources ? `The source cards below keep the best links ready: ${sources}.` : "",
-    ]
-      .filter(Boolean)
-      .join("\n\n");
+    return "The AI summary is still loading. If this keeps happening, check the model or the proxy endpoint.";
   }
 
   window.DxMetasearchAnswerCommon = {
